@@ -19,3 +19,4 @@ emulators.log
 .kotlin/
 test_apk/
 test_apk.zip
+gradle/gradle-daemon-jvm.properties
