@@ -1,45 +1,92 @@
 package com.meds.app.ui.screens.patient
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Medication
+import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.meds.app.ui.screens.settings.AccountSettingsScreen
+import com.meds.app.ui.screens.settings.AccountUiState
+import com.meds.app.widget.NextDoseWidgetProvider
 
 private const val ROUTE_HOME = "home"
 private const val ROUTE_MEDICATIONS = "medications"
 private const val ROUTE_GARDEN = "garden"
+private const val ROUTE_SETTINGS = "settings"
 private const val ROUTE_HISTORY = "history"
 private const val ROUTE_COMPANIONS = "companions"
 private const val ROUTE_EDITOR_NEW = "medication_editor/new"
 private const val ROUTE_EDITOR_PATTERN = "medication_editor/{medicationId}"
 
 @Composable
-fun PatientApp(name: String) {
+fun PatientApp(
+    account: AccountUiState,
+    onLinkEmail: (String, String) -> Unit,
+    onSignOut: () -> Unit,
+    onClearAuthMessages: () -> Unit
+) {
+    val name = account.name
+    val patientViewModel: PatientViewModel = viewModel(key = "patient_${account.userId}")
+    val companionViewModel: PatientCompanionViewModel =
+        viewModel(key = "patient_companions_${account.userId}")
+    val state by patientViewModel.state.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
-    val topLevelRoutes = setOf(ROUTE_HOME, ROUTE_MEDICATIONS, ROUTE_GARDEN)
+    val topLevelRoutes = setOf(ROUTE_HOME, ROUTE_MEDICATIONS, ROUTE_GARDEN, ROUTE_SETTINGS)
+    val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+
+    LaunchedEffect(state.medications, state.schedules, state.loading) {
+        if (!state.loading) {
+            patientViewModel.ensureTodayDoses()
+        }
+    }
+
+    LaunchedEffect(state.todayDoses, state.loading) {
+        if (!state.loading) {
+            NextDoseWidgetProvider.update(context.applicationContext, state.todayDoses)
+        }
+    }
+
+    LaunchedEffect(state.error) {
+        val message = state.error
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            patientViewModel.clearError()
+        }
+    }
 
     Scaffold(
-        modifier = Modifier.fillMaxSize(),
         containerColor = MaterialTheme.colorScheme.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (currentRoute in topLevelRoutes) {
                 NavigationBar(
@@ -100,6 +147,24 @@ fun PatientApp(name: String) {
                         label = { Text("Jardín") },
                         colors = navigationColors()
                     )
+                    NavigationBarItem(
+                        selected = currentRoute == ROUTE_SETTINGS,
+                        onClick = {
+                            navController.navigate(ROUTE_SETTINGS) {
+                                popUpTo(ROUTE_HOME) { saveState = true }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = Icons.Outlined.Settings,
+                                contentDescription = null
+                            )
+                        },
+                        label = { Text("Ajustes") },
+                        colors = navigationColors()
+                    )
                 }
             }
         }
@@ -112,13 +177,18 @@ fun PatientApp(name: String) {
             composable(ROUTE_HOME) {
                 HomeScreen(
                     name = name,
+                    state = state,
                     onAddMedication = { navController.navigate(ROUTE_EDITOR_NEW) },
+                    onTakeDose = patientViewModel::takeDose,
+                    onSnoozeDose = patientViewModel::snoozeDose,
+                    onViewAll = { navController.navigate(ROUTE_HISTORY) },
                     onOpenCompanions = { navController.navigate(ROUTE_COMPANIONS) },
-                    onViewHistory = { navController.navigate(ROUTE_HISTORY) }
+                    onMarkNudgeRead = patientViewModel::markNudgeRead
                 )
             }
             composable(ROUTE_MEDICATIONS) {
                 MedicationsScreen(
+                    state = state,
                     onAddMedication = { navController.navigate(ROUTE_EDITOR_NEW) },
                     onEditMedication = { medicationId ->
                         navController.navigate("medication_editor/$medicationId")
@@ -126,25 +196,57 @@ fun PatientApp(name: String) {
                 )
             }
             composable(ROUTE_GARDEN) {
-                GardenScreen()
+                GardenScreen(plant = state.plant)
+            }
+            composable(ROUTE_SETTINGS) {
+                AccountSettingsScreen(
+                    account = account,
+                    onBack = { navController.popBackStack() },
+                    onLinkEmail = onLinkEmail,
+                    onSignOut = onSignOut,
+                    onClearAuthMessages = onClearAuthMessages
+                )
             }
             composable(ROUTE_HISTORY) {
-                HistoryScreen(onBack = { navController.popBackStack() })
+                HistoryScreen(
+                    doses = state.recentDoses,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(ROUTE_COMPANIONS) {
-                PatientCompanionScreen(onBack = { navController.popBackStack() })
+                PatientCompanionScreen(
+                    viewModel = companionViewModel,
+                    patientName = name,
+                    onBack = { navController.popBackStack() }
+                )
             }
             composable(ROUTE_EDITOR_NEW) {
                 MedicationEditorScreen(
-                    medicationId = null,
-                    onBack = { navController.popBackStack() }
+                    viewModel = patientViewModel,
+                    medication = null,
+                    schedule = null,
+                    onDone = { navController.popBackStack() }
                 )
             }
             composable(ROUTE_EDITOR_PATTERN) { entry ->
-                MedicationEditorScreen(
-                    medicationId = entry.arguments?.getString("medicationId"),
-                    onBack = { navController.popBackStack() }
-                )
+                val medicationId = entry.arguments?.getString("medicationId")
+                val medication = state.medications.firstOrNull { it.id == medicationId }
+                val schedule = state.schedules.firstOrNull { it.medicationId == medicationId }
+                if (medication == null) {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    }
+                } else {
+                    MedicationEditorScreen(
+                        viewModel = patientViewModel,
+                        medication = medication,
+                        schedule = schedule,
+                        onDone = { navController.popBackStack() }
+                    )
+                }
             }
         }
     }

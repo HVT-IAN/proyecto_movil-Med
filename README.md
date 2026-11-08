@@ -1,50 +1,117 @@
 # MEDs
 
-Aplicación Android nativa para recordar medicamentos, pensada para personas con TDAH. Este repositorio usa dos ramas principales:
+Aplicación Android nativa para recordar medicamentos, pensada para personas con TDAH. Incluye un modo acompañante vinculado mediante un código QR temporal.
 
-- `main`: cascarón inicial compilable. Contiene la estructura, el tema visual, la navegación principal y pantallas placeholder.
-- `develop`: desarrollo activo de la aplicación.
+## Ramas
 
-La interfaz está en español y no se usan emojis en el código, la documentación, las notificaciones ni los mensajes de commit.
-
-## Estado de main
-
-`main` es una base mínima y funcional. Se puede abrir en Android Studio, compilar e instalar. Todavía no incluye la lógica del producto.
-
-Incluye:
-
-- Proyecto Gradle con Kotlin y Jetpack Compose.
-- Material 3, tema claro y oscuro, tipografías y componentes base.
-- Estructura completa de carpetas.
-- Navegación inicial de paciente y acompañante.
-- Pantallas placeholder para cada ruta.
-- Iconos, fuentes y recursos de lanzamiento.
-- Script para comprobar que no se introduzcan emojis.
-
-No incluye todavía:
-
-- Firebase Authentication ni Cloud Firestore.
-- Alarmas, notificaciones locales o QR.
-- Repositorios, ViewModels o lógica de negocio.
-- `google-services.json`.
+- `main`: cascarón inicial compilable con la estructura, el tema y las pantallas base.
+- `develop`: desarrollo activo de la aplicación completa.
 
 ## Stack
 
-| Área | Tecnología |
-| --- | --- |
-| Lenguaje | Kotlin |
-| Interfaz | Jetpack Compose y Material 3 |
-| Arquitectura | MVVM con inyección manual de dependencias |
-| Navegación | Navigation Compose |
-| Build | Gradle Kotlin DSL |
-| SDK | minSdk 26, compileSdk 37, targetSdk 37 |
+- Kotlin, Jetpack Compose y Material 3.
+- MVVM con inyección manual de dependencias.
+- Firebase Authentication con correo/contraseña y sesión anónima vinculable.
+- Cloud Firestore con caché offline.
+- DataStore para preferencias locales.
+- AlarmManager y notificaciones locales.
+- ZXing para generar y escanear el QR.
+- Autenticación biométrica con androidx.biometric.
+- Widget de escritorio con la próxima toma.
+- Sin Room, Hilt, NanoHTTPD, FCM ni Cloud Functions.
 
-Versiones base:
+## Requisitos
 
-- Android Gradle Plugin 9.4.1
-- Kotlin 2.4.21
-- Gradle 9.6.0
-- Compose BOM 2026.02.01
+- Android Studio con JDK 17.
+- SDK de Android 37.
+- Un proyecto Firebase con la app `com.meds.app` registrada.
+- `app/google-services.json` en su lugar. Por seguridad, este archivo no se versiona; cada integrante debe colocar el suyo antes de compilar.
+
+## Configuración de Firebase
+
+La app no puede iniciar sesión hasta completar estos pasos en la consola de Firebase del proyecto `medsproto`.
+
+1. Abrir Authentication, entrar en Sign-in method y habilitar los proveedores Anónimo y Correo electrónico/Contraseña.
+2. Crear una base de datos de Cloud Firestore en modo producción.
+3. Publicar las reglas de `firestore.rules`.
+
+Con Firebase CLI:
+
+```powershell
+npm install -g firebase-tools
+firebase login
+firebase deploy --only firestore:rules --project medsproto
+```
+
+También se pueden pegar las reglas manualmente en Firestore Database, pestaña Rules.
+
+## Compilar y ejecutar
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+.\gradlew.bat :app:assembleDebug
+```
+
+El APK queda en `app\build\outputs\apk\debug\app-debug.apk`.
+
+Para instalarlo en un emulador o dispositivo conectado:
+
+```powershell
+adb install -r app\build\outputs\apk\debug\app-debug.apk
+```
+
+## Pruebas locales con emuladores de Firebase
+
+La app incluye una variante de depuración que apunta a los emuladores locales de Authentication y Firestore. No modifica la variante normal.
+
+```powershell
+npx --yes firebase-tools@latest emulators:start --only auth,firestore --project medsproto
+```
+
+En otra terminal, con el emulador de Android o un dispositivo conectado por USB:
+
+```powershell
+adb reverse tcp:9099 tcp:9099
+adb reverse tcp:8080 tcp:8080
+$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
+.\gradlew.bat :app:assembleDebug "-Pmeds.useFirebaseEmulator=true"
+adb install -r app\build\outputs\apk\debug\app-debug.apk
+```
+
+La variante de emulador usa `127.0.0.1` y redirige los puertos con `adb reverse`, por lo que funciona tanto en el emulador como en un dispositivo físico conectado por USB. Si se reinicia adb o el dispositivo, hay que repetir los dos comandos `adb reverse`. Para volver a la configuración real, compilar de nuevo sin la propiedad `meds.useFirebaseEmulator`.
+
+## Flujo principal
+
+1. Al abrir la app, desbloquear con huella o rostro si el dispositivo tiene biometría inscrita.
+2. Iniciar sesión con correo y contraseña, crear una cuenta o continuar sin cuenta. El modo anónimo muestra una advertencia y puede vincularse a un correo más adelante desde Ajustes.
+3. Elegir el rol de paciente o acompañante. La flecha superior derecha permite volver.
+4. Escribir el nombre y completar la introducción.
+5. Como paciente, agregar un medicamento con una o varias horas.
+6. Confirmar o posponer las tomas del día desde Hoy.
+7. Abrir el icono de QR en Hoy y generar un código de acompañante.
+8. En otro dispositivo o emulador, elegir el rol de acompañante, escanear el QR o escribir el código.
+9. El panel del acompañante muestra en tiempo real las tomas del día y permite enviar un recordatorio.
+
+## Cuentas y datos
+
+- La cuenta anónima permite usar la app sin registro; sus datos quedan ligados a la sesión del dispositivo.
+- Desde Ajustes > Cuenta se puede vincular un correo al usuario anónimo actual. La vinculación conserva el mismo `uid`, por lo que medicamentos, tomas e historial se mantienen.
+- Al iniciar sesión en otro dispositivo, el rol y el nombre se recuperan desde Firestore.
+- Cerrar sesión borra las preferencias locales. Si la cuenta es anónima y no se vinculó un correo, no se puede volver a acceder a esos datos.
+
+## Widget de próxima toma
+
+El widget se agrega desde el selector de widgets del launcher. Muestra el nombre del medicamento, la dosis y la hora de la siguiente toma pendiente. Se actualiza cuando cambian las tomas en la app y cada 30 minutos; si cambia el día, invita a abrir MEDs para refrescar los datos.
+
+El código de vinculación dura 10 minutos y es de un solo uso. El paciente puede retirar el acceso desde la misma pantalla.
+
+## Recordatorios
+
+- La app programa alarmas exactas cuando el sistema lo permite.
+- Si no se concede el acceso especial de alarmas exactas, usa alarmas inexactas.
+- Las notificaciones incluyen las acciones `Ya la tomé` y `Posponer 10 min`.
+- Las alarmas se reprograman al reiniciar el dispositivo.
+- En Android 12 o superior conviene habilitar `Alarmas y recordatorios` para la app desde los ajustes del sistema.
 
 ## Estructura
 
@@ -53,156 +120,64 @@ app/src/main/java/com/meds/app
   MainActivity.kt
   MedsApp.kt
 
-  data
-    local
-    model
-    repository
-
-  notifications
-
-  ui
-    MedsRoot.kt
-    components
-    screens
-      companion
-      onboarding
-      patient
-      role
-      shared
-    theme
-
-  util
-
-app/src/main/res
-  drawable
-  font
-  mipmap-anydpi-v26
-  values
-  values-night
-  xml
-
-docs
-scripts
-gradle/wrapper
+  data/model          Modelos de Firestore
+  data/repository     Autenticación, paciente y acompañante
+  data/local          Preferencias con DataStore
+  notifications       Alarmas, canales y receptores
+  widget              Widget de próxima toma
+  ui/screens/auth      Inicio de sesión, registro y advertencia anónima
+  ui/screens/settings  Cuenta, vinculación de correo y cierre de sesión
+  ui/screens/patient  Hoy, medicamentos, jardín, historial y acompañante
+  ui/screens/companion Panel y vinculación del acompañante
+  ui/screens/shared   Carga, error y bloqueo biométrico
+  ui/theme            Tema Sereno clínico
+  util                Fechas, QR y códigos
 ```
 
-Las carpetas que todavía no tienen código conservan un archivo `.gitkeep` para que Git las versione.
+### Capas MVVM
 
-## Rutas iniciales
+- `ui/screens` y `ui/components`: capa View. Composables que dibujan el estado y emiten eventos; no consultan Firebase ni DataStore.
+- `ui/*ViewModel`: capa ViewModel. Exponen `StateFlow`, reciben eventos y lanzan corrutinas en `viewModelScope`.
+- `data/repository`: capa Repository. Centraliza el acceso a datos, los batches y las reglas de negocio; convierte las respuestas a modelos.
+- `data/local`, Firebase Auth/Firestore y `AlarmScheduler`: fuentes de datos remotas, locales y del dispositivo.
+- `ui/theme`, `ui/components` y `util`: elementos transversales de interfaz y utilidades.
 
-### Nivel raíz
+La API externa es Firebase (Authentication y Cloud Firestore). El almacenamiento local usa DataStore para preferencias, la caché offline de Firestore para los datos de dominio y SharedPreferences para el widget.
 
-| Ruta | Pantalla |
-| --- | --- |
-| `role` | Selección de rol |
-| `onboarding/{role}` | Introducción y nombre |
-| `patient` | Aplicación del paciente |
-| `companion` | Aplicación del acompañante |
-
-### Paciente
-
-| Ruta | Pantalla |
-| --- | --- |
-| `home` | Hoy |
-| `medications` | Medicamentos |
-| `garden` | Jardín |
-| `history` | Historial |
-| `companions` | Acompañantes |
-| `medication_editor/new` | Nuevo medicamento |
-| `medication_editor/{medicationId}` | Editar medicamento |
-
-La barra inferior muestra `home`, `medications` y `garden`. Las demás rutas se abren desde la pantalla Hoy o desde la lista de medicamentos.
-
-### Acompañante
-
-| Ruta | Pantalla |
-| --- | --- |
-| `link` | Vinculación por QR o código manual |
-| `panel` | Panel del día |
-
-## Flujo de ramas
+## Datos en Firestore
 
 ```text
-main
-  └── develop
-        ├── feature/paciente-home
-        ├── feature/medication-editor
-        ├── feature/companion-qr
-        ├── feature/notifications
-        ├── fix/alarm-reschedule
-        └── docs/readme
+users/{uid}
+  name, role, createdAt
+  medications/{medicationId}
+  schedules/{scheduleId}
+  doseLogs/{logId}
+  plant/state
+  companions/{companionUid}
+  nudges/{nudgeId}
+users/{companionUid}/linkedPatients/{patientUid}
+pairingInvites/{code}
 ```
 
-Reglas sugeridas:
+## Limitaciones conocidas
 
-- `main` recibe solo versiones estables.
-- `develop` integra el trabajo diario.
-- Cada funcionalidad nace de `develop` y vuelve a `develop` mediante Pull Request.
-- Los nombres de rama usan `feature/`, `fix/`, `docs/` o `chore/`.
-- Los commits siguen Conventional Commits en español y sin emojis.
+- Una cuenta anónima sin correo vinculado pierde el acceso a sus datos si se desinstala la app o se cierra sesión. La app advierte y permite vincular un correo desde Ajustes.
+- Firestore Spark no entrega notificaciones push cuando la app está completamente cerrada; las alarmas locales siguen funcionando.
+- El modo acompañante requiere que el paciente haya abierto la app al menos una vez para crear su perfil y sus tomas del día.
+- El historial del acompañante se limita al día actual.
 
-Ejemplos:
+## Evidencias
 
-```text
-feat(paciente): agregar editor de medicamentos
-feat(recordatorios): programar alarmas exactas
-fix(acompanante): corregir vinculacion manual
-docs: actualizar guia de Firebase
-```
+Las capturas de la verificación funcional están en `evidencias/`. Incluyen selección de rol, onboarding, editor de medicamentos, widget y bloqueo biométrico, además de inicio de sesión, ajustes y QR.
 
-## Compilar
+## Documentación para el equipo
 
-Requisitos:
-
-- Android Studio con JDK 17.
-- SDK de Android 37.
-- Emulador o dispositivo con Android 8.0 o superior.
-
-```powershell
-$env:JAVA_HOME = "C:\Program Files\Android\Android Studio\jbr"
-.\gradlew.bat :app:assembleDebug
-```
-
-El APK queda en:
-
-```text
-app\build\outputs\apk\debug\app-debug.apk
-```
-
-Para instalarlo:
-
-```powershell
-adb install -r app\build\outputs\apk\debug\app-debug.apk
-```
+La guía funcional y técnica está en `docs/MEDs_Documentacion_Equipo.pdf`. Incluye el recorrido completo de uso, la arquitectura MVVM, las integraciones del dispositivo, la matriz de cobertura de la rúbrica y un guion de demostración de 10 minutos.
 
 ## Validación
 
-Comprobar que no se introdujeron emojis:
+Para comprobar que no se introdujeron emojis en el código, la documentación ni los recursos:
 
 ```powershell
 .\scripts\check-no-emoji.ps1
 ```
-
-## Siguiente etapa en develop
-
-- Agregar Firebase Authentication anónima y Cloud Firestore.
-- Implementar repositorios, ViewModels y modelos de datos.
-- Completar el onboarding y la sesión.
-- Implementar medicamentos, horarios y tomas.
-- Conectar alarmas exactas y notificaciones locales.
-- Implementar QR, vinculación y panel del acompañante.
-- Completar el jardín y el historial.
-- Añadir reglas de Firestore y pruebas.
-
-## Convenciones
-
-- Textos de interfaz en español.
-- Sin emojis.
-- Sin Room, Hilt, NanoHTTPD, FCM ni Cloud Functions.
-- Inyección de dependencias manual.
-- Las pantallas no acceden directamente a Firebase.
-- Los repositorios concentran el acceso a datos, alarmas y preferencias.
-
-## Licencia
-
-Este repositorio no incluye una licencia explícita. Antes de publicarlo o reutilizar el código, agrega un archivo `LICENSE` con la licencia elegida.

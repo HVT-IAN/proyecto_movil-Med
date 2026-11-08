@@ -1,0 +1,94 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function isCompanionOf(patientUid) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(patientUid)/companions/$(request.auth.uid));
+    }
+
+    function inviteData(code) {
+      return get(/databases/$(database)/documents/pairingInvites/$(code)).data;
+    }
+
+    function validInvite(code, patientUid) {
+      return exists(/databases/$(database)/documents/pairingInvites/$(code))
+        && inviteData(code).used == false
+        && inviteData(code).expiresAt > request.time
+        && inviteData(code).patientUid == patientUid;
+    }
+
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isCompanionOf(uid);
+      allow create: if isSelf(uid);
+      allow update: if isSelf(uid);
+      allow delete: if false;
+
+      match /medications/{medicationId} {
+        allow read: if isSelf(uid) || isCompanionOf(uid);
+        allow write: if isSelf(uid);
+      }
+
+      match /schedules/{scheduleId} {
+        allow read: if isSelf(uid) || isCompanionOf(uid);
+        allow write: if isSelf(uid);
+      }
+
+      match /doseLogs/{logId} {
+        allow read: if isSelf(uid) || isCompanionOf(uid);
+        allow create, update, delete: if isSelf(uid);
+      }
+
+      match /plant/{plantId} {
+        allow read: if isSelf(uid) || isCompanionOf(uid);
+        allow write: if isSelf(uid);
+      }
+
+      match /companions/{companionUid} {
+        allow read: if isSelf(uid) || isSelf(companionUid);
+        allow create: if isSelf(companionUid)
+          && request.auth.uid != uid
+          && validInvite(request.resource.data.inviteCode, uid);
+        allow delete: if isSelf(uid) || isSelf(companionUid);
+        allow update: if false;
+      }
+
+      match /nudges/{nudgeId} {
+        allow read, update: if isSelf(uid);
+        allow create: if isCompanionOf(uid)
+          && request.resource.data.fromUid == request.auth.uid;
+        allow delete: if isSelf(uid);
+      }
+
+      match /linkedPatients/{patientUid} {
+        allow read, delete: if isSelf(uid);
+        allow create: if isSelf(uid)
+          && request.auth.uid != patientUid
+          && validInvite(request.resource.data.inviteCode, patientUid);
+        allow update: if false;
+      }
+    }
+
+    match /pairingInvites/{code} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && request.resource.data.patientUid == request.auth.uid
+        && request.resource.data.used == false
+        && request.resource.data.expiresAt > request.time
+        && request.resource.data.patientName is string;
+      allow update: if signedIn()
+        && resource.data.used == false
+        && request.time < resource.data.expiresAt
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['used'])
+        && request.resource.data.used == true;
+      allow delete: if signedIn() && resource.data.patientUid == request.auth.uid;
+    }
+  }
+}
