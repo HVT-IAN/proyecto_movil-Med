@@ -16,3 +16,6 @@ google-services.json
 firebase-debug.log
 firestore-debug.log
 emulators.log
+.kotlin/
+test_apk/
+test_apk.zip
