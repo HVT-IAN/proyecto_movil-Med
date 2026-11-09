@@ -13,12 +13,14 @@ Aplicación Android nativa para recordar medicamentos, pensada para personas con
 - MVVM con inyección manual de dependencias.
 - Firebase Authentication con correo/contraseña y sesión anónima vinculable.
 - Cloud Firestore con caché offline.
+- Firebase Cloud Messaging para notificaciones push.
+- Cloud Functions (Node 22) para enviar los push desde Firestore.
 - DataStore para preferencias locales.
 - AlarmManager y notificaciones locales.
 - ZXing para generar y escanear el QR.
 - Autenticación biométrica con androidx.biometric.
 - Widget de escritorio con la próxima toma.
-- Sin Room, Hilt, NanoHTTPD, FCM ni Cloud Functions.
+- Sin Room, Hilt ni NanoHTTPD.
 
 ## Requisitos
 
@@ -34,16 +36,19 @@ La app no puede iniciar sesión hasta completar estos pasos en la consola de Fir
 1. Abrir Authentication, entrar en Sign-in method y habilitar los proveedores Anónimo y Correo electrónico/Contraseña.
 2. Crear una base de datos de Cloud Firestore en modo producción.
 3. Publicar las reglas de `firestore.rules`.
+4. Habilitar el plan Blaze. Cloud Functions lo exige, aunque el volumen de este proyecto entra en la capa gratuita.
 
 Con Firebase CLI:
 
 ```powershell
 npm install -g firebase-tools
 firebase login
-firebase deploy --only firestore:rules --project medsproto
+firebase use medsproto
+npm install --prefix functions
+firebase deploy --only firestore:rules,functions --project medsproto
 ```
 
-También se pueden pegar las reglas manualmente en Firestore Database, pestaña Rules.
+Las reglas también se pueden pegar manualmente en Firestore Database, pestaña Rules. Las Cloud Functions solo se pueden desplegar con el plan Blaze y una cuenta autorizada en Firebase CLI.
 
 ## Compilar y ejecutar
 
@@ -80,6 +85,8 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 La variante de emulador usa `127.0.0.1` y redirige los puertos con `adb reverse`, por lo que funciona tanto en el emulador como en un dispositivo físico conectado por USB. Si se reinicia adb o el dispositivo, hay que repetir los dos comandos `adb reverse`. Para volver a la configuración real, compilar de nuevo sin la propiedad `meds.useFirebaseEmulator`.
 
+La variante de emulador no registra tokens FCM ni permite probar push; para eso hay que usar la variante normal con Firebase real y las Functions desplegadas.
+
 ## Flujo principal
 
 1. Al abrir la app, desbloquear con huella o rostro si el dispositivo tiene biometría inscrita.
@@ -88,9 +95,10 @@ La variante de emulador usa `127.0.0.1` y redirige los puertos con `adb reverse`
 4. Escribir el nombre y completar la introducción.
 5. Como paciente, agregar un medicamento con una o varias horas.
 6. Confirmar o posponer las tomas del día desde Hoy.
-7. Abrir el icono de QR en Hoy y generar un código de acompañante.
+7. Abrir el icono de QR en Hoy y generar un código de acompañante. El botón `Generar nuevo QR` invalida el código anterior y crea uno vigente.
 8. En otro dispositivo o emulador, elegir el rol de acompañante, escanear el QR o escribir el código.
 9. El panel del acompañante muestra en tiempo real las tomas del día y permite enviar un recordatorio.
+10. El paciente recibe el recordatorio dentro de la app y como notificación push, con sonido y vibración. La vinculación también genera un push de bienvenida.
 
 ## Cuentas y datos
 
@@ -103,7 +111,9 @@ La variante de emulador usa `127.0.0.1` y redirige los puertos con `adb reverse`
 
 El widget se agrega desde el selector de widgets del launcher. Muestra el nombre del medicamento, la dosis y la hora de la siguiente toma pendiente. Se actualiza cuando cambian las tomas en la app y cada 30 minutos; si cambia el día, invita a abrir MEDs para refrescar los datos.
 
-El código de vinculación dura 10 minutos y es de un solo uso. El paciente puede retirar el acceso desde la misma pantalla.
+## Vinculación de acompañantes
+
+El código de vinculación dura 10 minutos y es de un solo uso. El paciente puede retirar el acceso desde la misma pantalla o generar uno nuevo con `Generar nuevo QR`; al hacerlo, el código anterior queda invalidado de inmediato y cualquier intento de usarlo recibe el mensaje `Este código ya fue utilizado`.
 
 ## Recordatorios
 
@@ -112,6 +122,24 @@ El código de vinculación dura 10 minutos y es de un solo uso. El paciente pued
 - Las notificaciones incluyen las acciones `Ya la tomé` y `Posponer 10 min`.
 - Las alarmas se reprograman al reiniciar el dispositivo.
 - En Android 12 o superior conviene habilitar `Alarmas y recordatorios` para la app desde los ajustes del sistema.
+
+### Notificaciones push
+
+- Los recordatorios del acompañante se envían con Firebase Cloud Messaging y funcionan con la app cerrada o en segundo plano.
+- La vinculación de un acompañante también genera un push.
+- Canales de alta importancia: `meds_nudges_v2` para recordatorios y `meds_companions` para vinculaciones. Ambos usan sonido, vibración y aviso en pantalla.
+- La app registra el token FCM del paciente en `users/{uid}/devices/{token}` y lo elimina al cerrar sesión.
+- Las Cloud Functions `nudgeCreated` y `companionLinked` escuchan los documentos de Firestore y envían el push a todos los dispositivos del paciente. Si FCM informa un token inválido, la función lo elimina.
+- Requiere el plan Blaze y las Functions desplegadas. Sin ese despliegue, la app sigue mostrando los recordatorios dentro de la interfaz, pero no llegan como push.
+- En Android 13 o superior hay que conceder el permiso de notificaciones. Si el usuario usa `Forzar detención` desde Ajustes, Android bloquea la entrega de push hasta que vuelva a abrir la app; cerrarla desde recientes no tiene ese efecto.
+
+Para verificar el push de punta a punta después del despliegue:
+
+1. Iniciar sesión como paciente y confirmar que aparece un documento en `users/{uid}/devices` con el token FCM.
+2. Cerrar la app desde la pantalla de recientes, sin usar `Forzar detención`.
+3. Desde la cuenta del acompañante, enviar un recordatorio o vincularse con un código vigente.
+4. Confirmar que la notificación llega con sonido, vibración y aviso en pantalla.
+5. Tocar la notificación y comprobar que abre la app en la pantalla Hoy.
 
 ## Estructura
 
@@ -123,7 +151,7 @@ app/src/main/java/com/meds/app
   data/model          Modelos de Firestore
   data/repository     Autenticación, paciente y acompañante
   data/local          Preferencias con DataStore
-  notifications       Alarmas, canales y receptores
+  notifications       Alarmas, canales, receptores y servicio FCM
   widget              Widget de próxima toma
   ui/screens/auth      Inicio de sesión, registro y advertencia anónima
   ui/screens/settings  Cuenta, vinculación de correo y cierre de sesión
@@ -132,6 +160,8 @@ app/src/main/java/com/meds/app
   ui/screens/shared   Carga, error y bloqueo biométrico
   ui/theme            Tema Sereno clínico
   util                Fechas, QR y códigos
+
+functions/             Cloud Functions que envían los push
 ```
 
 ### Capas MVVM
@@ -142,7 +172,7 @@ app/src/main/java/com/meds/app
 - `data/local`, Firebase Auth/Firestore y `AlarmScheduler`: fuentes de datos remotas, locales y del dispositivo.
 - `ui/theme`, `ui/components` y `util`: elementos transversales de interfaz y utilidades.
 
-La API externa es Firebase (Authentication y Cloud Firestore). El almacenamiento local usa DataStore para preferencias, la caché offline de Firestore para los datos de dominio y SharedPreferences para el widget.
+La API externa es Firebase (Authentication, Cloud Firestore, Cloud Messaging y Cloud Functions). El almacenamiento local usa DataStore para preferencias, la caché offline de Firestore para los datos de dominio y SharedPreferences para el widget.
 
 ## Datos en Firestore
 
@@ -155,6 +185,7 @@ users/{uid}
   plant/state
   companions/{companionUid}
   nudges/{nudgeId}
+  devices/{token}
 users/{companionUid}/linkedPatients/{patientUid}
 pairingInvites/{code}
 ```
@@ -162,13 +193,14 @@ pairingInvites/{code}
 ## Limitaciones conocidas
 
 - Una cuenta anónima sin correo vinculado pierde el acceso a sus datos si se desinstala la app o se cierra sesión. La app advierte y permite vincular un correo desde Ajustes.
-- Firestore Spark no entrega notificaciones push cuando la app está completamente cerrada; las alarmas locales siguen funcionando.
+- Los push requieren el plan Blaze y las Cloud Functions desplegadas. Mientras no se desplieguen, los recordatorios solo se ven dentro de la app.
+- Android no entrega push si el usuario fuerza la detención de la app desde Ajustes; cerrarla desde recientes sí permite la entrega.
 - El modo acompañante requiere que el paciente haya abierto la app al menos una vez para crear su perfil y sus tomas del día.
 - El historial del acompañante se limita al día actual.
 
 ## Evidencias
 
-Las capturas de la verificación funcional están en `evidencias/`. Incluyen selección de rol, onboarding, editor de medicamentos, widget y bloqueo biométrico, además de inicio de sesión, ajustes y QR.
+Las capturas de la verificación funcional están en `evidencias/`. Incluyen selección de rol, onboarding, editor de medicamentos, widget y bloqueo biométrico, además de inicio de sesión, ajustes, QR, regeneración con invalidación del código anterior, vinculación de acompañante, recordatorios y canales de notificación con sonido y vibración.
 
 ## Documentación para el equipo
 

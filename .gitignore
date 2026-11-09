@@ -20,3 +20,4 @@ emulators.log
 test_apk/
 test_apk.zip
 gradle/gradle-daemon-jvm.properties
+functions/node_modules/
