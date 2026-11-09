@@ -32,9 +32,14 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.google.firebase.messaging.FirebaseMessaging
+import com.meds.app.BuildConfig
+import com.meds.app.data.repository.UserRepository
 import com.meds.app.ui.screens.settings.AccountSettingsScreen
 import com.meds.app.ui.screens.settings.AccountUiState
 import com.meds.app.widget.NextDoseWidgetProvider
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.tasks.await
 
 private const val ROUTE_HOME = "home"
 private const val ROUTE_MEDICATIONS = "medications"
@@ -63,6 +68,19 @@ fun PatientApp(
     val topLevelRoutes = setOf(ROUTE_HOME, ROUTE_MEDICATIONS, ROUTE_GARDEN, ROUTE_SETTINGS)
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val userRepository = remember { UserRepository() }
+
+    LaunchedEffect(account.userId) {
+        if (BuildConfig.USE_FIREBASE_EMULATOR) return@LaunchedEffect
+        repeat(3) { attempt ->
+            val saved = runCatching {
+                val token = FirebaseMessaging.getInstance().token.await()
+                userRepository.saveDeviceToken(account.userId, token)
+            }.isSuccess
+            if (saved) return@LaunchedEffect
+            delay(2_000L * (attempt + 1))
+        }
+    }
 
     LaunchedEffect(state.medications, state.schedules, state.loading) {
         if (!state.loading) {

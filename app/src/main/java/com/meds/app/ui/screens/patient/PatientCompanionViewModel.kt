@@ -25,12 +25,14 @@ data class PatientCompanionUiState(
     val invite: PairingInvite? = null,
     val nudges: List<Nudge> = emptyList(),
     val generating: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val infoMessage: String? = null
 )
 
 private data class PatientCompanionExtras(
     val generating: Boolean = false,
-    val error: String? = null
+    val error: String? = null,
+    val infoMessage: String? = null
 )
 
 class PatientCompanionViewModel(application: Application) : AndroidViewModel(application) {
@@ -70,22 +72,41 @@ class PatientCompanionViewModel(application: Application) : AndroidViewModel(app
     }
 
     val state: StateFlow<PatientCompanionUiState> = combine(coreFlow, extras) { core, extra ->
-        core.copy(generating = extra.generating, error = extra.error)
+        core.copy(
+            generating = extra.generating,
+            error = extra.error,
+            infoMessage = extra.infoMessage
+        )
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
         initialValue = PatientCompanionUiState()
     )
 
-    fun generateInvite(patientName: String) {
+    fun generateInvite(
+        patientName: String,
+        previousCode: String? = null
+    ) {
         val uid = patientUid ?: return
         if (extras.value.generating) return
-        extras.update { it.copy(generating = true, error = null) }
+        extras.update { it.copy(generating = true, error = null, infoMessage = null) }
         viewModelScope.launch {
+            if (!previousCode.isNullOrBlank()) {
+                repository.invalidateInvite(previousCode)
+            }
             repository.createInvite(uid, patientName)
                 .onSuccess { created ->
                     invite.value = created
-                    extras.update { it.copy(generating = false) }
+                    extras.update {
+                        it.copy(
+                            generating = false,
+                            infoMessage = if (previousCode.isNullOrBlank()) {
+                                "Código generado."
+                            } else {
+                                "Nuevo código generado. El anterior ya no funciona."
+                            }
+                        )
+                    }
                 }
                 .onFailure { throwable ->
                     extras.update {
@@ -112,5 +133,9 @@ class PatientCompanionViewModel(application: Application) : AndroidViewModel(app
 
     fun clearError() {
         extras.update { it.copy(error = null) }
+    }
+
+    fun clearInfo() {
+        extras.update { it.copy(infoMessage = null) }
     }
 }

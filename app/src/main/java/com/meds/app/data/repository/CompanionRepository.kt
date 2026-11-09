@@ -128,6 +128,15 @@ class CompanionRepository(
         error("No se pudo generar un código. Intenta de nuevo.")
     }
 
+    suspend fun invalidateInvite(code: String): Result<Unit> = runCatching {
+        if (code.isBlank()) return@runCatching
+        val inviteRef = firestore.collection("pairingInvites").document(code)
+        val snapshot = inviteRef.get().await()
+        if (snapshot.exists() && snapshot.getBoolean("used") != true) {
+            inviteRef.update("used", true).await()
+        }
+    }
+
     suspend fun linkWithCode(
         rawCode: String,
         companionName: String

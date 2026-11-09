@@ -13,7 +13,7 @@ $extensions = @(
     "*.gradle",
     "*.toml"
 )
-$excludedDirectories = @("build", ".gradle", ".idea", ".git")
+$excludedDirectories = @("build", ".gradle", ".idea", ".git", "node_modules")
 
 $files = Get-ChildItem -Path $root -Recurse -File -Include $extensions |
     Where-Object {
