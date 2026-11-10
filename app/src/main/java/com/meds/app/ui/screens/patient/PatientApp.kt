@@ -62,7 +62,8 @@ fun PatientApp(
     account: AccountUiState,
     onLinkEmail: (String, String) -> Unit,
     onSignOut: () -> Unit,
-    onClearAuthMessages: () -> Unit
+    onClearAuthMessages: () -> Unit,
+    onBiometricChange: (Boolean) -> Unit
 ) {
     val name = account.name
     val patientViewModel: PatientViewModel = viewModel(key = "patient_${account.userId}")
@@ -229,7 +230,8 @@ fun PatientApp(
                     onBack = { navController.popBackStack() },
                     onLinkEmail = onLinkEmail,
                     onSignOut = onSignOut,
-                    onClearAuthMessages = onClearAuthMessages
+                    onClearAuthMessages = onClearAuthMessages,
+                    onBiometricChange = onBiometricChange
                 )
             }
             composable(ROUTE_HISTORY) {

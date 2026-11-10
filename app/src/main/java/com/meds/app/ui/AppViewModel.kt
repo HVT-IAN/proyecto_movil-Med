@@ -39,9 +39,19 @@ data class AppUiState(
     val role: UserRole? = null,
     val name: String = "",
     val onboarded: Boolean = false,
+    val biometricEnabled: Boolean = false,
+    val biometricAsked: Boolean = false,
     val authLoading: Boolean = false,
     val authError: String? = null,
     val authNotice: String? = null
+)
+
+private data class LocalPreferences(
+    val role: String?,
+    val name: String,
+    val onboarded: Boolean,
+    val biometricEnabled: Boolean,
+    val biometricAsked: Boolean
 )
 
 class AppViewModel(application: Application) : AndroidViewModel(application) {
@@ -89,19 +99,24 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             combine(
                 preferences.role,
                 preferences.name,
-                preferences.onboarded
-            ) { role, name, onboarded -> Triple(role, name, onboarded) }
-                .collect { (role, name, onboarded) ->
-                    _state.update {
-                        it.copy(
-                            role = role?.let { value ->
-                                UserRole.entries.firstOrNull { entry -> entry.name == value }
-                            },
-                            name = name,
-                            onboarded = onboarded
-                        )
-                    }
+                preferences.onboarded,
+                preferences.biometricEnabled,
+                preferences.biometricAsked
+            ) { role, name, onboarded, biometricEnabled, biometricAsked ->
+                LocalPreferences(role, name, onboarded, biometricEnabled, biometricAsked)
+            }.collect { local ->
+                _state.update {
+                    it.copy(
+                        role = local.role?.let { value ->
+                            UserRole.entries.firstOrNull { entry -> entry.name == value }
+                        },
+                        name = local.name,
+                        onboarded = local.onboarded,
+                        biometricEnabled = local.biometricEnabled,
+                        biometricAsked = local.biometricAsked
+                    )
                 }
+            }
         }
     }
 
@@ -247,6 +262,18 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
             val uid = authRepository.currentUserId ?: return@launch
             val role = preferences.role.first() ?: return@launch
             runCatching { userRepository.saveProfile(uid, role, name.trim()) }
+        }
+    }
+
+    fun setBiometricEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            preferences.setBiometricEnabled(enabled)
+        }
+    }
+
+    fun markBiometricAsked() {
+        viewModelScope.launch {
+            preferences.markBiometricAsked()
         }
     }
 

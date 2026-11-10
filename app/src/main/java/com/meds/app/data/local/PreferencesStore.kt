@@ -14,9 +14,15 @@ class PreferencesStore(private val context: Context) {
     private val roleKey = stringPreferencesKey("role")
     private val nameKey = stringPreferencesKey("name")
     private val onboardedKey = booleanPreferencesKey("onboarded")
+    private val biometricEnabledKey = booleanPreferencesKey("biometric_enabled")
+    private val biometricAskedKey = booleanPreferencesKey("biometric_asked")
     val role: Flow<String?> = context.medsDataStore.data.map { it[roleKey] }
     val name: Flow<String> = context.medsDataStore.data.map { it[nameKey].orEmpty() }
     val onboarded: Flow<Boolean> = context.medsDataStore.data.map { it[onboardedKey] ?: false }
+    val biometricEnabled: Flow<Boolean> =
+        context.medsDataStore.data.map { it[biometricEnabledKey] ?: false }
+    val biometricAsked: Flow<Boolean> =
+        context.medsDataStore.data.map { it[biometricAskedKey] ?: false }
 
     suspend fun setRole(role: String) {
         context.medsDataStore.edit { preferences ->
@@ -49,11 +55,26 @@ class PreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        context.medsDataStore.edit { preferences ->
+            preferences[biometricEnabledKey] = enabled
+            preferences[biometricAskedKey] = true
+        }
+    }
+
+    suspend fun markBiometricAsked() {
+        context.medsDataStore.edit { preferences ->
+            preferences[biometricAskedKey] = true
+        }
+    }
+
     suspend fun clearAll() {
         context.medsDataStore.edit { preferences ->
             preferences.remove(roleKey)
             preferences.remove(nameKey)
             preferences.remove(onboardedKey)
+            preferences.remove(biometricEnabledKey)
+            preferences.remove(biometricAskedKey)
         }
     }
 }

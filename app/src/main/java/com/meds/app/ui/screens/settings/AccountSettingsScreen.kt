@@ -23,6 +23,7 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Visibility
@@ -36,16 +37,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -59,6 +63,8 @@ import com.meds.app.ui.components.LabelValue
 import com.meds.app.ui.components.MedsCard
 import com.meds.app.ui.components.PrimaryActionButton
 import com.meds.app.ui.components.SectionLabel
+import com.meds.app.ui.screens.shared.findFragmentActivity
+import com.meds.app.ui.screens.shared.requestBiometricAuthentication
 import com.meds.app.ui.theme.LocalMedsColors
 
 data class AccountUiState(
@@ -67,6 +73,8 @@ data class AccountUiState(
     val role: UserRole = UserRole.PATIENT,
     val email: String? = null,
     val isAnonymous: Boolean = false,
+    val biometricEnabled: Boolean = false,
+    val biometricAvailable: Boolean = true,
     val authLoading: Boolean = false,
     val authError: String? = null,
     val authNotice: String? = null
@@ -78,7 +86,8 @@ fun AccountSettingsScreen(
     onBack: () -> Unit,
     onLinkEmail: (String, String) -> Unit,
     onSignOut: () -> Unit,
-    onClearAuthMessages: () -> Unit
+    onClearAuthMessages: () -> Unit,
+    onBiometricChange: (Boolean) -> Unit
 ) {
     val colors = LocalMedsColors.current
     val roleLabel = if (account.role == UserRole.PATIENT) "Paciente" else "Acompañante"
@@ -102,6 +111,10 @@ fun AccountSettingsScreen(
     var linkPassword by rememberSaveable { mutableStateOf("") }
     var linkConfirmPassword by rememberSaveable { mutableStateOf("") }
     var linkPasswordVisible by rememberSaveable { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val activity = remember(context) { context.findFragmentActivity() }
+    var biometricError by remember { mutableStateOf<String?>(null) }
 
     val emailValid = isValidEmail(linkEmail)
     val passwordValid = linkPassword.length >= 6
@@ -252,6 +265,75 @@ fun AccountSettingsScreen(
                         icon = Icons.Outlined.CheckCircle,
                         text = "Tu cuenta está vinculada. Podrás recuperar tus datos " +
                             "iniciando sesión en cualquier dispositivo."
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            SectionLabel(text = "Seguridad")
+            Spacer(Modifier.height(10.dp))
+
+            MedsCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Outlined.Fingerprint,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(26.dp)
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Desbloquear con huella o rostro",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = when {
+                                !account.biometricAvailable ->
+                                    "No disponible en este dispositivo."
+                                account.biometricEnabled ->
+                                    "Activado. Se pedirá al abrir MEDS."
+                                else ->
+                                    "Desactivado. MEDS abre sin biometría."
+                            },
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Switch(
+                        checked = account.biometricEnabled,
+                        enabled = account.biometricAvailable,
+                        onCheckedChange = { checked ->
+                            biometricError = null
+                            if (!checked) {
+                                onBiometricChange(false)
+                            } else {
+                                val currentActivity = activity
+                                if (currentActivity == null) {
+                                    biometricError = "No se encontró el sensor de biometría."
+                                } else {
+                                    requestBiometricAuthentication(
+                                        activity = currentActivity,
+                                        title = "Activa el desbloqueo",
+                                        subtitle = "Confirma tu huella o rostro para activarlo",
+                                        onSuccess = { onBiometricChange(true) },
+                                        onError = { message -> biometricError = message }
+                                    )
+                                }
+                            }
+                        }
+                    )
+                }
+                if (biometricError != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = biometricError.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
                     )
                 }
             }

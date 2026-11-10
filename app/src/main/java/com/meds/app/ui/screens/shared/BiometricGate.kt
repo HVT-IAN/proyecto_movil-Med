@@ -17,9 +17,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -45,6 +47,48 @@ import com.meds.app.ui.components.PrimaryActionButton
 private const val ALLOWED_AUTHENTICATORS = BiometricManager.Authenticators.BIOMETRIC_WEAK
 private const val RELOCK_AFTER_MS = 5 * 60 * 1000L
 
+fun isBiometricAvailable(context: Context): Boolean =
+    BiometricManager.from(context)
+        .canAuthenticate(ALLOWED_AUTHENTICATORS) == BiometricManager.BIOMETRIC_SUCCESS
+
+fun requestBiometricAuthentication(
+    activity: FragmentActivity,
+    title: String,
+    subtitle: String,
+    negativeText: String = "Cancelar",
+    onSuccess: () -> Unit,
+    onError: (String) -> Unit
+) {
+    val prompt = BiometricPrompt(
+        activity,
+        ContextCompat.getMainExecutor(activity),
+        object : BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(
+                result: BiometricPrompt.AuthenticationResult
+            ) {
+                onSuccess()
+            }
+
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                onError(errString.toString())
+            }
+
+            override fun onAuthenticationFailed() {
+                onError("No se reconoció la identidad. Intenta de nuevo.")
+            }
+        }
+    )
+
+    val promptInfo = BiometricPrompt.PromptInfo.Builder()
+        .setTitle(title)
+        .setSubtitle(subtitle)
+        .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
+        .setNegativeButtonText(negativeText)
+        .build()
+
+    prompt.authenticate(promptInfo)
+}
+
 @Composable
 fun BiometricGate(
     enabled: Boolean = true,
@@ -53,10 +97,9 @@ fun BiometricGate(
     val context = LocalContext.current
     val activity = remember(context) { context.findFragmentActivity() }
     val canAuthenticate = remember(activity) {
-        activity != null && BiometricManager.from(activity)
-            .canAuthenticate(ALLOWED_AUTHENTICATORS) == BiometricManager.BIOMETRIC_SUCCESS
+        activity != null && isBiometricAvailable(activity)
     }
-    var unlocked by rememberSaveable(enabled, canAuthenticate) {
+    var unlocked by rememberSaveable {
         mutableStateOf(!enabled || !canAuthenticate)
     }
     var prompting by remember { mutableStateOf(false) }
@@ -67,18 +110,25 @@ fun BiometricGate(
     val currentUnlocked by rememberUpdatedState(unlocked)
     val currentPrompting by rememberUpdatedState(prompting)
     val currentCanAuthenticate by rememberUpdatedState(canAuthenticate)
+    val currentEnabled by rememberUpdatedState(enabled)
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> {
-                    if (currentUnlocked && currentCanAuthenticate && !currentPrompting) {
+                    if (
+                        currentEnabled &&
+                        currentUnlocked &&
+                        currentCanAuthenticate &&
+                        !currentPrompting
+                    ) {
                         backgroundedAt = SystemClock.elapsedRealtime()
                     }
                 }
 
                 Lifecycle.Event.ON_START -> {
                     if (
+                        currentEnabled &&
                         currentUnlocked &&
                         backgroundedAt > 0L &&
                         SystemClock.elapsedRealtime() - backgroundedAt >= RELOCK_AFTER_MS
@@ -101,43 +151,23 @@ fun BiometricGate(
         prompting = true
         error = null
 
-        val prompt = BiometricPrompt(
-            activity,
-            ContextCompat.getMainExecutor(activity),
-            object : BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(
-                    result: BiometricPrompt.AuthenticationResult
-                ) {
-                    prompting = false
-                    unlocked = true
-                }
-
-                override fun onAuthenticationError(
-                    errorCode: Int,
-                    errString: CharSequence
-                ) {
-                    prompting = false
-                    error = errString.toString()
-                }
-
-                override fun onAuthenticationFailed() {
-                    error = "No se reconoció la identidad. Intenta de nuevo."
-                }
+        requestBiometricAuthentication(
+            activity = activity,
+            title = "Desbloquea MEDs",
+            subtitle = "Usa tu huella o rostro para continuar",
+            onSuccess = {
+                prompting = false
+                unlocked = true
+            },
+            onError = { message ->
+                prompting = false
+                error = message
             }
         )
-
-        val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Desbloquea MEDs")
-            .setSubtitle("Usa tu huella o rostro para continuar")
-            .setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
-            .setNegativeButtonText("Cancelar")
-            .build()
-
-        prompt.authenticate(promptInfo)
     }
 
-    LaunchedEffect(canAuthenticate, unlocked) {
-        if (!unlocked && canAuthenticate) {
+    LaunchedEffect(enabled, canAuthenticate, unlocked) {
+        if (enabled && !unlocked && canAuthenticate) {
             requestAuthentication()
         }
     }
@@ -211,7 +241,80 @@ private fun BiometricLockScreen(
     }
 }
 
-private fun Context.findFragmentActivity(): FragmentActivity? {
+@Composable
+fun BiometricOptInDialog(
+    onEnable: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    val context = LocalContext.current
+    val activity = remember(context) { context.findFragmentActivity() }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                imageVector = Icons.Outlined.Fingerprint,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary
+            )
+        },
+        title = { Text("Protege tu información") },
+        text = {
+            Column {
+                Text(
+                    text = "¿Quieres desbloquear MEDS con tu huella o rostro?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Puedes cambiarlo cuando quieras en Ajustes.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                if (error != null) {
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = error.orEmpty(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.error
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val currentActivity = activity
+                    if (currentActivity == null) {
+                        error = "No se encontró el sensor de biometría."
+                    } else {
+                        requestBiometricAuthentication(
+                            activity = currentActivity,
+                            title = "Activa el desbloqueo",
+                            subtitle = "Confirma tu huella o rostro para activarlo",
+                            onSuccess = {
+                                error = null
+                                onEnable()
+                            },
+                            onError = { message -> error = message }
+                        )
+                    }
+                }
+            ) {
+                Text("Activar huella")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Ahora no")
+            }
+        }
+    )
+}
+
+fun Context.findFragmentActivity(): FragmentActivity? {
     var current: Context? = this
     while (current != null) {
         if (current is FragmentActivity) return current

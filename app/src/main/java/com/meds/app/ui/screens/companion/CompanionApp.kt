@@ -79,7 +79,8 @@ fun CompanionApp(
     account: AccountUiState,
     onLinkEmail: (String, String) -> Unit,
     onSignOut: () -> Unit,
-    onClearAuthMessages: () -> Unit
+    onClearAuthMessages: () -> Unit,
+    onBiometricChange: (Boolean) -> Unit
 ) {
     val name = account.name
     var showSettings by rememberSaveable { mutableStateOf(false) }
@@ -92,7 +93,8 @@ fun CompanionApp(
             onBack = { showSettings = false },
             onLinkEmail = onLinkEmail,
             onSignOut = onSignOut,
-            onClearAuthMessages = onClearAuthMessages
+            onClearAuthMessages = onClearAuthMessages,
+            onBiometricChange = onBiometricChange
         )
         return
     }
