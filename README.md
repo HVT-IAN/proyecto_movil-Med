@@ -2,6 +2,10 @@
 
 Aplicación Android nativa para recordar medicamentos, pensada para personas con TDAH. Incluye un modo acompañante vinculado mediante un código QR temporal y consulta de medicamentos con la API de CIMA/AEMPS. Versión 1.1.
 
+**Equipo:** Ian Oscani Diaz Vazquez, Carlos Adrian Alarcon Valencia  
+**Universidad:** Universidad Politécnica de Chiapas  
+**Fecha:** 9 de noviembre de 2026
+
 ## Ramas
 
 - `main`: versión estable de entrega (release 1.1).
