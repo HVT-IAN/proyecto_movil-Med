@@ -639,10 +639,11 @@ Lifecycle.Event.ON_START -> {
         ["Evidencias", "38 capturas en evidencias/."],
         ["Versión", "versionName 1.1, versionCode 2."],
         ["Release", "APK y AAB firmados en dist/."],
+        ["GitHub Release", "v1.1 publicado con APK y AAB adjuntos."],
         ["Firma", "Keystore local no versionado; contraseña en keystore.properties, ignorado por Git."],
     ], [120, CONTENT_WIDTH - 120]))
     story.append(H2("9.2 Release firmado"))
-    story.append(P("El release se compila con assembleRelease y bundleRelease. El APK firmado queda en dist/MEDs-release-1.1.apk y el AAB en dist/MEDs-release-1.1.aab. La firma se verificó con apksigner; el certificado es CN=MEDs, OU=Proyecto integrador, O=MEDs, L=Madrid, ST=Madrid, C=ES."))
+    story.append(P("El release se compila con assembleRelease y bundleRelease. El APK firmado queda en dist/MEDs-release-1.1.apk y el AAB en dist/MEDs-release-1.1.aab. La firma se verificó con apksigner; el certificado es CN=MEDs, OU=Proyecto integrador, O=MEDs, L=Madrid, ST=Madrid, C=ES. El Release v1.1 está publicado en GitHub con el APK y el AAB adjuntos."))
     story.append(P("El keystore y keystore.properties no se suben al repositorio. Hay que respaldarlos: sin ellos no se pueden publicar actualizaciones con la misma identidad. El APK de depuración también queda en dist/MEDs-debug-production.apk para pruebas internas."))
     story.append(H2("9.3 Checklist antes de entregar"))
     story += BULLETS([
@@ -650,7 +651,7 @@ Lifecycle.Event.ON_START -> {
         "Release 1.1 firmado e instalado en el dispositivo físico.",
         "PDF y README actualizados.",
         "Evidencias 32 a 38 incluidas.",
-        "Tag v1.1 y Release de GitHub con el APK adjunto.",
+        "Tag v1.1 y Release de GitHub publicados con APK y AAB adjuntos.",
         "Cuenta de demostración con correo y contraseña disponibles por canal aparte.",
         "Guion de 10 minutos ensayado.",
         "Push: desplegar Functions y Blaze si se va a demostrar con la app cerrada.",
@@ -680,7 +681,7 @@ Lifecycle.Event.ON_START -> {
         ["¿Cómo se protege la privacidad?", "Reglas de Firestore, invitaciones de un solo uso y biometría después del login."],
         ["¿Por qué la biometría no se pide al abrir?", "Porque antes del login no hay datos que proteger. Se pide al entrar al espacio y tras 5 minutos en segundo plano."],
         ["¿Qué pasa al cerrar sesión?", "Se limpian las preferencias; una cuenta con correo se recupera al iniciar sesión; una anónima sin vincular se pierde y la UI lo advierte."],
-        ["¿Qué falta?", "Desplegar Functions/Blaze para el push real, probar el release en el dispositivo físico y crear el Release de GitHub con el APK."],
+        ["¿Qué falta?", "Desplegar Functions/Blaze para el push real y probar el release en el dispositivo físico."],
     ], [135, CONTENT_WIDTH - 135]))
     story.append(H2("10.3 Mapa de código para la defensa"))
     story.append(T([
@@ -802,7 +803,7 @@ firebase deploy --only functions,firestore:rules --project medsproto
         "Reglas de Firestore publicadas y probadas.",
         "Functions y Blaze desplegados si se demuestra push cerrado.",
         "PDF, README y evidencias 1 a 38 actualizados.",
-        "Tag v1.1 y Release de GitHub con el APK adjunto.",
+        "Tag v1.1 y Release de GitHub publicados con APK y AAB adjuntos.",
         "Cuenta de demostración y contraseña disponibles por canal aparte.",
         "Guion de 10 minutos ensayado.",
     ])
