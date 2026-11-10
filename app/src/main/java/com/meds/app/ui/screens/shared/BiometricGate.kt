@@ -118,7 +118,6 @@ fun requestBiometricAuthentication(
         }
 
         Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-            builder.setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
             @Suppress("DEPRECATION")
             builder.setDeviceCredentialAllowed(true)
         }
