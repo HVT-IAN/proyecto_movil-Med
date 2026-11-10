@@ -1,11 +1,12 @@
 # MEDs
 
-Aplicación Android nativa para recordar medicamentos, pensada para personas con TDAH. Incluye un modo acompañante vinculado mediante un código QR temporal.
+Aplicación Android nativa para recordar medicamentos, pensada para personas con TDAH. Incluye un modo acompañante vinculado mediante un código QR temporal y consulta de medicamentos con la API de CIMA/AEMPS. Versión 1.1.
 
 ## Ramas
 
 - `main`: cascarón inicial compilable con la estructura, el tema y las pantallas base.
 - `develop`: desarrollo activo de la aplicación completa.
+- `feature/*`: ramas de trabajo. La consulta CIMA y la biometría se integraron desde `feature/consulta-cima-biometria`.
 
 ## Stack
 
@@ -64,6 +65,28 @@ Para instalarlo en un emulador o dispositivo conectado:
 
 ```powershell
 adb install -r app\build\outputs\apk\debug\app-debug.apk
+```
+
+## Release firmado
+
+La versión 1.1 usa `versionCode 2` y `versionName "1.1"`.
+
+```powershell
+.\gradlew.bat :app:assembleRelease :app:bundleRelease
+```
+
+Artefactos generados:
+
+- `app\build\outputs\apk\release\app-release.apk`
+- `app\build\outputs\bundle\release\app-release.aab`
+- Copias listas para entregar: `dist\MEDs-release-1.1.apk` y `dist\MEDs-release-1.1.aab`
+
+La firma usa `keystore\meds-release.jks` y `keystore.properties`. Ambos están ignorados por Git y no deben subirse. Hay que respaldarlos porque son necesarios para futuras actualizaciones.
+
+Para verificar la firma del APK:
+
+```powershell
+apksigner verify --print-certs dist\MEDs-release-1.1.apk
 ```
 
 ## Pruebas locales con emuladores de Firebase
@@ -226,7 +249,7 @@ Las capturas de la verificación funcional están en `evidencias/`. Incluyen sel
 
 ## Documentación para el equipo
 
-La guía funcional y técnica está en `docs/MEDs_Documentacion_Equipo.pdf`. Incluye el recorrido completo de uso, la arquitectura MVVM, las integraciones del dispositivo, la matriz de cobertura de la rúbrica y un guion de demostración de 10 minutos.
+La guía funcional y técnica actualizada está en `docs/MEDs_Documentacion_Equipo_v1.1.pdf`. Incluye el recorrido completo de uso, la arquitectura MVVM, la API REST de CIMA con Retrofit, la biometría después del login, el release firmado, la matriz de cobertura de la rúbrica y un guion de demostración de 10 minutos.
 
 ## Validación
 
