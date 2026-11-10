@@ -389,7 +389,8 @@ def build():
     ])
     story.append(H2("2.3 Biometría"))
     story += BULLETS([
-        "La huella o el rostro se piden al entrar a un espacio ya creado, no en la pantalla de login.",
+        "La app pregunta una sola vez si el usuario quiere desbloquear con huella o rostro; la elección se puede cambiar en Ajustes.",
+        "Si el usuario la activa, se pide al entrar a un espacio ya creado, no en la pantalla de login.",
         "Si el dispositivo no tiene biometría inscrita, la app no bloquea.",
         "Si la app vuelve del segundo plano después de 5 minutos, se pide de nuevo.",
         "Los cambios rápidos entre apps no vuelven a pedir huella.",
@@ -581,7 +582,7 @@ class MedicationInfoRepository(
     story.append(H2("7.1 QR para vincular al acompañante"))
     story.append(P("El paciente genera una invitación con QrCodeGenerator (ZXing) y la muestra como QR con el contenido meds://pair?code=XXXXXXXX. El acompañante puede escanearlo con ZXing Embedded o escribir el código de 8 caracteres. La invitación dura 10 minutos, es de un solo uso y las reglas validan que el paciente sea el dueño. Generar nuevo QR invalida el código anterior."))
     story.append(H2("7.2 Biometría después del login"))
-    story.append(P("BiometricGate envuelve el contenido autenticado y con onboarding completo, no la pantalla de login. Usa BiometricPrompt con BIOMETRIC_WEAK. Si el dispositivo tiene huella o rostro inscrito, pide desbloqueo al entrar al espacio. Si no hay biometría, no bloquea."))
+    story.append(P("BiometricGate envuelve el contenido autenticado y con onboarding completo, no la pantalla de login. Usa BiometricPrompt con BIOMETRIC_WEAK. Tras el onboarding, la app pregunta una sola vez si el usuario quiere usar huella o rostro, y la preferencia se puede cambiar en Ajustes. Si la opción está activa y el dispositivo tiene biometría inscrita, pide desbloqueo al entrar al espacio; si está desactivada o no hay biometría, la app abre sin bloquear."))
     story.append(P("Un LifecycleEventObserver registra cuándo la app pasa a segundo plano. Al volver, si pasaron 5 minutos o más, se vuelve a bloquear; si fue un cambio rápido, no interrumpe. Es un equilibrio entre privacidad y la baja fricción que necesita una persona con TDAH."))
     story.append(CODE("""
 private const val RELOCK_AFTER_MS = 5 * 60 * 1000L
@@ -716,7 +717,7 @@ Lifecycle.Event.ON_START -> {
         ["¿Por qué no Room?", "Firestore es la fuente de verdad y ya tiene caché offline; DataStore cubre preferencias. La consulta CIMA es información de referencia y no se persiste."],
         ["¿Cómo funciona sin conexión?", "Firestore conserva la caché; CIMA muestra un error de red claro y permite reintentar."],
         ["¿Cómo se protege la privacidad?", "Reglas de Firestore, invitaciones de un solo uso y biometría después del login."],
-        ["¿Por qué la biometría no se pide al abrir?", "Porque antes del login no hay datos que proteger. Se pide al entrar al espacio y tras 5 minutos en segundo plano."],
+        ["¿Cuándo se pide la biometría?", "La app pregunta una sola vez después del onboarding si quieres usarla, y se puede cambiar en Ajustes. Si está activa, se pide al entrar al espacio y tras 5 minutos en segundo plano."],
         ["¿Qué pasa al cerrar sesión?", "Se limpian las preferencias; una cuenta con correo se recupera al iniciar sesión; una anónima sin vincular se pierde y la UI lo advierte."],
         ["¿Qué falta?", "Desplegar Functions/Blaze para el push real y probar el release en el dispositivo físico."],
     ], [135, CONTENT_WIDTH - 135]))
