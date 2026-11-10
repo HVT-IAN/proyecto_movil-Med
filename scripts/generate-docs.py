@@ -428,7 +428,7 @@ def build():
     story.append(P("La app separa interfaz, estado, acceso a datos y fuentes. Ninguna pantalla habla directamente con Firebase ni con CIMA: las pantallas observan un StateFlow del ViewModel y envían eventos; el ViewModel llama al Repository; el Repository encapsula el SDK, Retrofit y las reglas de negocio."))
     story.append(T([
         ["Capa", "Responsabilidad", "Ejemplos"],
-        ["Interfaz (Compose)", "Dibuja el estado y emite eventos; no accede a datos.", "ui/screens, ui/components, MedsRoot"],
+        ["Interfaz (Compose)", "Dibuja el estado y emite eventos; no accede a datos.", "presentation/, core/ui/components, navigation/AppNavGraph"],
         ["Estado (ViewModel)", "Expone StateFlow, lanza corrutinas y traduce errores.", "AppViewModel, PatientViewModel, MedicationInfoViewModel"],
         ["Datos (Repository)", "Operaciones, batches, mapeo, reglas y Result.", "AuthRepository, PatientRepository, CompanionRepository, MedicationInfoRepository"],
         ["Fuentes", "Identidad, base de datos, API REST, preferencias y alarmas.", "FirebaseAuth, FirebaseFirestore, Retrofit, DataStore, AlarmManager"],
@@ -436,15 +436,16 @@ def build():
     story.append(H2("3.1 Paquetes principales"))
     story.append(T([
         ["Paquete", "Contenido"],
-        ["data/model", "Modelos inmutables de Firestore y de consulta CIMA."],
-        ["data/remote", "CimaApi, CimaClient, DTOs y configuración de Retrofit."],
+        ["domain/model", "Modelos inmutables de Firestore y de consulta CIMA."],
+        ["data/remote/api", "CimaApi, CimaClient y configuración de Retrofit."],
+        ["data/remote/dto", "DTOs de la API de CIMA."],
         ["data/repository", "AuthRepository, UserRepository, PatientRepository, CompanionRepository, MedicationInfoRepository y mapeos."],
         ["data/local", "PreferencesStore con DataStore: rol, nombre y onboarding."],
-        ["notifications", "Alarmas, canales, receptores y MedsMessagingService."],
-        ["ui/screens/patient", "Hoy, medicamentos, consulta CIMA, jardín, historial y acompañante."],
-        ["ui/screens/companion", "Panel y vinculación del acompañante."],
-        ["ui/screens/shared", "Carga, error y BiometricGate."],
-        ["widget, util", "Widget de próxima toma, fechas, QR y códigos."],
+        ["integration/notifications", "Alarmas, canales, receptores y MedsMessagingService."],
+        ["presentation/patient", "Hoy, medicamentos, consulta CIMA, jardín, historial y acompañante."],
+        ["presentation/companion", "Panel y vinculación del acompañante."],
+        ["core/ui/components, integration/biometric", "Carga, error y BiometricGate."],
+        ["integration/widget, core/common", "Widget de próxima toma, fechas, QR y códigos."],
     ], [125, CONTENT_WIDTH - 125]))
     story.append(H2("3.2 Estado, corrutinas y errores"))
     story.append(P("Los ViewModels exponen un único StateFlow. Para combinar fuentes se usa combine; para cambiar de día o de paciente, flatMapLatest; para evitar trabajo innecesario, stateIn(WhileSubscribed(5_000)). Las pantallas recogen el estado con collectAsStateWithLifecycle. Las escrituras son suspend y devuelven Result; los errores se traducen a mensajes comprensibles y se muestran con snackbar o tarjetas de error."))
@@ -732,7 +733,7 @@ Lifecycle.Event.ON_START -> {
         ["Consulta CIMA UI", "MedicationInfoScreen.kt, MedicationEditorScreen.kt, PatientApp.kt"],
         ["Estado del paciente", "PatientViewModel.kt"],
         ["Firestore", "PatientRepository.kt, CompanionRepository.kt, FirestoreMappers.kt"],
-        ["Biometría", "BiometricGate.kt, MedsRoot.kt"],
+        ["Biometría", "integration/biometric/BiometricGate.kt, navigation/AppNavGraph.kt"],
         ["Push", "MedsMessagingService.kt, NotificationHelper.kt, functions/index.js"],
         ["Persistencia", "PreferencesStore.kt, NextDoseWidgetProvider.kt, AlarmScheduler.kt"],
         ["Seguridad", "firestore.rules"],

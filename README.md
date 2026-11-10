@@ -197,30 +197,39 @@ app/src/main/java/com/meds/app
   MainActivity.kt
   MedsApp.kt
 
-  data/model          Modelos de Firestore y de consulta CIMA
-  data/remote         Cliente Retrofit y DTOs de CIMA
+  navigation/         AppNavGraph y rutas de Navigation Compose
+  core/common         Fechas, QR y códigos
+  core/ui/components  Componentes Compose reutilizables
+  core/ui/theme       Tema Sereno clínico
+
+  domain/model        Modelos de Firestore y de consulta CIMA
+  data/remote/api     Cliente Retrofit de CIMA
+  data/remote/dto     DTOs de la API de CIMA
   data/repository     Autenticación, paciente, acompañante y consulta CIMA
   data/local          Preferencias con DataStore
-  notifications       Alarmas, canales, receptores y servicio FCM
-  widget              Widget de próxima toma
-  ui/screens/auth      Inicio de sesión, registro y advertencia anónima
-  ui/screens/settings  Cuenta, vinculación de correo y cierre de sesión
-  ui/screens/patient  Hoy, medicamentos, consulta CIMA, jardín, historial y acompañante
-  ui/screens/companion Panel y vinculación del acompañante
-  ui/screens/shared   Carga, error y bloqueo biométrico
-  ui/theme            Tema Sereno clínico
-  util                Fechas, QR y códigos
+
+  presentation/auth      Inicio de sesión, registro y advertencia anónima
+  presentation/onboarding Introducción y nombre
+  presentation/role      Selección de rol
+  presentation/patient   Hoy, medicamentos, consulta CIMA, jardín, historial y acompañante
+  presentation/companion Panel y vinculación del acompañante
+  presentation/settings  Cuenta, vinculación de correo y cierre de sesión
+  presentation/root      Estado global de sesión y autenticación
+
+  integration/biometric   Bloqueo con huella, rostro o PIN
+  integration/notifications Alarmas, canales, receptores y servicio FCM
+  integration/widget      Widget de próxima toma
 
 functions/             Cloud Functions que envían los push
 ```
 
 ### Capas MVVM
 
-- `ui/screens` y `ui/components`: capa View. Composables que dibujan el estado y emiten eventos; no consultan Firebase ni DataStore.
-- `ui/*ViewModel`: capa ViewModel. Exponen `StateFlow`, reciben eventos y lanzan corrutinas en `viewModelScope`.
+- `presentation/*` y `core/ui/components`: capa View. Composables que dibujan el estado y emiten eventos; no consultan Firebase ni DataStore.
+- `presentation/*/*ViewModel.kt`: capa ViewModel. Exponen `StateFlow`, reciben eventos y lanzan corrutinas en `viewModelScope`.
 - `data/repository`: capa Repository. Centraliza el acceso a datos, los batches y las reglas de negocio; convierte las respuestas a modelos.
-- `data/local`, Firebase Auth/Firestore y `AlarmScheduler`: fuentes de datos remotas, locales y del dispositivo.
-- `ui/theme`, `ui/components` y `util`: elementos transversales de interfaz y utilidades.
+- `data/local`, Firebase Auth/Firestore e `integration/notifications`: fuentes de datos remotas, locales y del dispositivo.
+- `core/ui/theme`, `core/ui/components` y `core/common`: elementos transversales de interfaz y utilidades.
 
 Las APIs externas son Firebase (Authentication, Cloud Firestore, Cloud Messaging y Cloud Functions) y la API REST de CIMA/AEMPS mediante Retrofit. El almacenamiento local usa DataStore para preferencias, la caché offline de Firestore para los datos de dominio y SharedPreferences para el widget.
 
