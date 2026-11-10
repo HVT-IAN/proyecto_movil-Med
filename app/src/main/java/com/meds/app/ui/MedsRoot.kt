@@ -19,6 +19,7 @@ import com.meds.app.ui.screens.role.RoleScreen
 import com.meds.app.ui.screens.settings.AccountUiState
 import com.meds.app.ui.screens.shared.BiometricGate
 import com.meds.app.ui.screens.shared.LoadingScreen
+import kotlinx.coroutines.delay
 
 @Composable
 fun MedsRoot(
@@ -29,6 +30,12 @@ fun MedsRoot(
     val role = state.role
     var authMode by rememberSaveable { mutableStateOf(AuthMode.LOGIN) }
     var showAnonymousWarning by rememberSaveable { mutableStateOf(false) }
+    var splashVisible by rememberSaveable { mutableStateOf(true) }
+
+    LaunchedEffect(Unit) {
+        delay(600L)
+        splashVisible = false
+    }
 
     LaunchedEffect(state.userId) {
         if (state.userId != null) {
@@ -56,9 +63,10 @@ fun MedsRoot(
     }
 
     when {
-        state.loading -> LoadingScreen()
         state.userId == null -> {
-            if (showAnonymousWarning) {
+            if (state.loading || splashVisible) {
+                LoadingScreen()
+            } else if (showAnonymousWarning) {
                 AnonymousWarningScreen(
                     authLoading = state.authLoading,
                     authError = state.authError,
@@ -94,16 +102,8 @@ fun MedsRoot(
                 )
             }
         }
-        role == null -> RoleScreen(
-            onSelectRole = viewModel::selectRole,
-            onBack = onExit
-        )
-        !state.onboarded -> OnboardingScreen(
-            role = role,
-            onFinish = viewModel::completeOnboarding,
-            onBack = viewModel::goBackToRoleSelection
-        )
-        else -> {
+
+        state.onboarded && role != null -> {
             val account = AccountUiState(
                 userId = state.userId.orEmpty(),
                 name = state.name,
@@ -115,7 +115,9 @@ fun MedsRoot(
                 authNotice = state.authNotice
             )
             BiometricGate {
-                if (role == UserRole.PATIENT) {
+                if (state.loading) {
+                    LoadingScreen()
+                } else if (role == UserRole.PATIENT) {
                     PatientApp(
                         account = account,
                         onLinkEmail = viewModel::linkEmail,
@@ -132,5 +134,20 @@ fun MedsRoot(
                 }
             }
         }
+
+        state.loading -> LoadingScreen()
+
+        role == null -> RoleScreen(
+            onSelectRole = viewModel::selectRole,
+            onBack = onExit
+        )
+
+        !state.onboarded -> OnboardingScreen(
+            role = role,
+            onFinish = viewModel::completeOnboarding,
+            onBack = viewModel::goBackToRoleSelection
+        )
+
+        else -> LoadingScreen()
     }
 }
