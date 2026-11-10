@@ -4,8 +4,8 @@ import android.app.Application
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.meds.app.notifications.AlarmScheduler
-import com.meds.app.notifications.NotificationHelper
+import com.meds.app.integration.notifications.AlarmScheduler
+import com.meds.app.integration.notifications.NotificationHelper
 
 class MedsApp : Application() {
     override fun onCreate() {

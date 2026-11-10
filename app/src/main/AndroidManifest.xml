@@ -40,7 +40,7 @@
             tools:replace="android:screenOrientation" />
 
         <service
-            android:name=".notifications.MedsMessagingService"
+            android:name=".integration.notifications.MedsMessagingService"
             android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -55,15 +55,15 @@
             android:value="meds_nudges_v2" />
 
         <receiver
-            android:name=".notifications.MedicationAlarmReceiver"
+            android:name=".integration.notifications.MedicationAlarmReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".notifications.DoseActionReceiver"
+            android:name=".integration.notifications.DoseActionReceiver"
             android:exported="false" />
 
         <receiver
-            android:name=".notifications.BootReceiver"
+            android:name=".integration.notifications.BootReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -72,7 +72,7 @@
         </receiver>
 
         <receiver
-            android:name=".widget.NextDoseWidgetProvider"
+            android:name=".integration.widget.NextDoseWidgetProvider"
             android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />

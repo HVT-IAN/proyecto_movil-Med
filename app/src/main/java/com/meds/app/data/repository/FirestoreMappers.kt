@@ -2,14 +2,14 @@ package com.meds.app.data.repository
 
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.QuerySnapshot
-import com.meds.app.data.model.CompanionLink
-import com.meds.app.data.model.DoseLog
-import com.meds.app.data.model.LinkedPatient
-import com.meds.app.data.model.Medication
-import com.meds.app.data.model.Nudge
-import com.meds.app.data.model.PairingInvite
-import com.meds.app.data.model.PlantState
-import com.meds.app.data.model.Schedule
+import com.meds.app.domain.model.CompanionLink
+import com.meds.app.domain.model.DoseLog
+import com.meds.app.domain.model.LinkedPatient
+import com.meds.app.domain.model.Medication
+import com.meds.app.domain.model.Nudge
+import com.meds.app.domain.model.PairingInvite
+import com.meds.app.domain.model.PlantState
+import com.meds.app.domain.model.Schedule
 
 fun DocumentSnapshot.toMedication(): Medication? {
     if (!exists()) return null

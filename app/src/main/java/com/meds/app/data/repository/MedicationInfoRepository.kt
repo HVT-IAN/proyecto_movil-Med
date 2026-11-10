@@ -1,15 +1,15 @@
 package com.meds.app.data.repository
 
-import com.meds.app.data.model.MedicationDocument
-import com.meds.app.data.model.MedicationInfo
-import com.meds.app.data.model.MedicationInfoDetail
-import com.meds.app.data.model.MedicationSearchResult
-import com.meds.app.data.remote.CimaApi
-import com.meds.app.data.remote.CimaClient
-import com.meds.app.data.remote.CimaDetail
-import com.meds.app.data.remote.CimaDoc
-import com.meds.app.data.remote.CimaIngredient
-import com.meds.app.data.remote.CimaMedication
+import com.meds.app.domain.model.MedicationDocument
+import com.meds.app.domain.model.MedicationInfo
+import com.meds.app.domain.model.MedicationInfoDetail
+import com.meds.app.domain.model.MedicationSearchResult
+import com.meds.app.data.remote.api.CimaApi
+import com.meds.app.data.remote.api.CimaClient
+import com.meds.app.data.remote.dto.CimaDetail
+import com.meds.app.data.remote.dto.CimaDoc
+import com.meds.app.data.remote.dto.CimaIngredient
+import com.meds.app.data.remote.dto.CimaMedication
 import com.google.gson.JsonParseException
 import retrofit2.HttpException
 import java.io.IOException
