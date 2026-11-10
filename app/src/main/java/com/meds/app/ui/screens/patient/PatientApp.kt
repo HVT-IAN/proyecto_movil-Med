@@ -1,5 +1,6 @@
 package com.meds.app.ui.screens.patient
 
+import android.net.Uri
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -28,10 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.google.firebase.messaging.FirebaseMessaging
 import com.meds.app.BuildConfig
 import com.meds.app.data.repository.UserRepository
@@ -49,6 +52,10 @@ private const val ROUTE_HISTORY = "history"
 private const val ROUTE_COMPANIONS = "companions"
 private const val ROUTE_EDITOR_NEW = "medication_editor/new"
 private const val ROUTE_EDITOR_PATTERN = "medication_editor/{medicationId}"
+private const val ROUTE_MEDICATION_INFO = "medication_info?query={query}"
+
+private fun medicationInfoRoute(query: String): String =
+    "medication_info?query=${Uri.encode(query)}"
 
 @Composable
 fun PatientApp(
@@ -238,11 +245,42 @@ fun PatientApp(
                     onBack = { navController.popBackStack() }
                 )
             }
-            composable(ROUTE_EDITOR_NEW) {
+            composable(
+                route = ROUTE_MEDICATION_INFO,
+                arguments = listOf(
+                    navArgument("query") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }
+                )
+            ) { entry ->
+                val query = entry.arguments?.getString("query").orEmpty()
+                MedicationInfoScreen(
+                    initialQuery = query,
+                    onBack = { navController.popBackStack() },
+                    onUseName = { selectedName ->
+                        navController.previousBackStackEntry
+                            ?.savedStateHandle
+                            ?.set("selected_medication_name", selectedName)
+                        navController.popBackStack()
+                    }
+                )
+            }
+            composable(ROUTE_EDITOR_NEW) { entry ->
+                val selectedName by entry.savedStateHandle
+                    .getStateFlow<String?>("selected_medication_name", null)
+                    .collectAsStateWithLifecycle()
                 MedicationEditorScreen(
                     viewModel = patientViewModel,
                     medication = null,
                     schedule = null,
+                    selectedName = selectedName,
+                    onOpenInfo = { query ->
+                        navController.navigate(medicationInfoRoute(query))
+                    },
+                    onConsumeSelectedName = {
+                        entry.savedStateHandle["selected_medication_name"] = null
+                    },
                     onDone = { navController.popBackStack() }
                 )
             }
@@ -258,10 +296,20 @@ fun PatientApp(
                         CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else {
+                    val selectedName by entry.savedStateHandle
+                        .getStateFlow<String?>("selected_medication_name", null)
+                        .collectAsStateWithLifecycle()
                     MedicationEditorScreen(
                         viewModel = patientViewModel,
                         medication = medication,
                         schedule = schedule,
+                        selectedName = selectedName,
+                        onOpenInfo = { query ->
+                            navController.navigate(medicationInfoRoute(query))
+                        },
+                        onConsumeSelectedName = {
+                            entry.savedStateHandle["selected_medication_name"] = null
+                        },
                         onDone = { navController.popBackStack() }
                     )
                 }
