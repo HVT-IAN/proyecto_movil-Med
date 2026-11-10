@@ -5,7 +5,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.fragment.app.FragmentActivity
 import com.meds.app.ui.MedsRoot
-import com.meds.app.ui.screens.shared.BiometricGate
 import com.meds.app.ui.theme.MedsTheme
 
 class MainActivity : FragmentActivity() {
@@ -14,9 +13,7 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
         setContent {
             MedsTheme {
-                BiometricGate {
-                    MedsRoot(onExit = { finish() })
-                }
+                MedsRoot(onExit = { finish() })
             }
         }
     }

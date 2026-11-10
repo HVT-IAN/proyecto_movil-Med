@@ -15,6 +15,7 @@ Aplicación Android nativa para recordar medicamentos, pensada para personas con
 - Cloud Firestore con caché offline.
 - Firebase Cloud Messaging para notificaciones push.
 - Cloud Functions (Node 22) para enviar los push desde Firestore.
+- Retrofit + Gson contra la API REST de CIMA/AEMPS para consultar medicamentos.
 - DataStore para preferencias locales.
 - AlarmManager y notificaciones locales.
 - ZXing para generar y escanear el QR.
@@ -89,16 +90,17 @@ La variante de emulador no registra tokens FCM ni permite probar push; para eso 
 
 ## Flujo principal
 
-1. Al abrir la app, desbloquear con huella o rostro si el dispositivo tiene biometría inscrita.
-2. Iniciar sesión con correo y contraseña, crear una cuenta o continuar sin cuenta. El modo anónimo muestra una advertencia y puede vincularse a un correo más adelante desde Ajustes.
-3. Elegir el rol de paciente o acompañante. La flecha superior derecha permite volver.
-4. Escribir el nombre y completar la introducción.
+1. Abrir la app. Si no hay sesión, iniciar sesión con correo y contraseña, crear una cuenta o continuar sin cuenta. El modo anónimo muestra una advertencia y puede vincularse a un correo más adelante desde Ajustes.
+2. Elegir el rol de paciente o acompañante. La flecha superior derecha permite volver.
+3. Escribir el nombre y completar la introducción.
+4. Al entrar al espacio, si el dispositivo tiene biometría inscrita, desbloquear con huella o rostro. La biometría no se pide antes del login.
 5. Como paciente, agregar un medicamento con una o varias horas.
-6. Confirmar o posponer las tomas del día desde Hoy.
-7. Abrir el icono de QR en Hoy y generar un código de acompañante. El botón `Generar nuevo QR` invalida el código anterior y crea uno vigente.
-8. En otro dispositivo o emulador, elegir el rol de acompañante, escanear el QR o escribir el código.
-9. El panel del acompañante muestra en tiempo real las tomas del día y permite enviar un recordatorio.
-10. El paciente recibe el recordatorio dentro de la app y como notificación push, con sonido y vibración. La vinculación también genera un push de bienvenida.
+6. En el editor, usar `Consultar medicamento` para buscar información oficial en CIMA/AEMPS.
+7. Confirmar o posponer las tomas del día desde Hoy.
+8. Abrir el icono de QR en Hoy y generar un código de acompañante. El botón `Generar nuevo QR` invalida el código anterior y crea uno vigente.
+9. En otro dispositivo o emulador, elegir el rol de acompañante, escanear el QR o escribir el código.
+10. El panel del acompañante muestra en tiempo real las tomas del día y permite enviar un recordatorio.
+11. El paciente recibe el recordatorio dentro de la app y como notificación push, con sonido y vibración. La vinculación también genera un push de bienvenida.
 
 ## Cuentas y datos
 
@@ -107,6 +109,13 @@ La variante de emulador no registra tokens FCM ni permite probar push; para eso 
 - Al iniciar sesión en otro dispositivo, el rol y el nombre se recuperan desde Firestore.
 - Cerrar sesión borra las preferencias locales. Si la cuenta es anónima y no se vinculó un correo, no se puede volver a acceder a esos datos.
 
+## Biometría
+
+- La biometría protege el espacio ya creado, no la pantalla de autenticación.
+- Se pide al entrar al espacio y se vuelve a pedir después de 5 minutos en segundo plano.
+- Los cambios rápidos entre apps no vuelven a pedir huella.
+- Si el dispositivo no tiene huella o rostro inscrito, la app no bloquea.
+
 ## Widget de próxima toma
 
 El widget se agrega desde el selector de widgets del launcher. Muestra el nombre del medicamento, la dosis y la hora de la siguiente toma pendiente. Se actualiza cuando cambian las tomas en la app y cada 30 minutos; si cambia el día, invita a abrir MEDs para refrescar los datos.
@@ -114,6 +123,16 @@ El widget se agrega desde el selector de widgets del launcher. Muestra el nombre
 ## Vinculación de acompañantes
 
 El código de vinculación dura 10 minutos y es de un solo uso. El paciente puede retirar el acceso desde la misma pantalla o generar uno nuevo con `Generar nuevo QR`; al hacerlo, el código anterior queda invalidado de inmediato y cualquier intento de usarlo recibe el mensaje `Este código ya fue utilizado`.
+
+## Consulta de medicamentos
+
+- La pantalla `Consultar medicamento` usa Retrofit contra la API REST pública de CIMA/AEMPS.
+- Busca por nombre comercial o principio activo, por ejemplo `ibuprofeno`, `paracetamol` u `omeprazol`.
+- Muestra hasta 20 resultados, priorizando el principio activo exacto y los medicamentos comercializados.
+- La ficha incluye principios activos, código ATC, presentaciones, excipientes y enlaces a la ficha técnica y al prospecto oficial.
+- Se puede usar el nombre comercial o el principio activo para completar el editor.
+- No requiere API key. Los estados de carga, sin resultados, sin conexión y error de formato se muestran en la interfaz.
+- La información es de referencia y no sustituye el consejo de un profesional sanitario.
 
 ## Recordatorios
 
@@ -148,14 +167,15 @@ app/src/main/java/com/meds/app
   MainActivity.kt
   MedsApp.kt
 
-  data/model          Modelos de Firestore
-  data/repository     Autenticación, paciente y acompañante
+  data/model          Modelos de Firestore y de consulta CIMA
+  data/remote         Cliente Retrofit y DTOs de CIMA
+  data/repository     Autenticación, paciente, acompañante y consulta CIMA
   data/local          Preferencias con DataStore
   notifications       Alarmas, canales, receptores y servicio FCM
   widget              Widget de próxima toma
   ui/screens/auth      Inicio de sesión, registro y advertencia anónima
   ui/screens/settings  Cuenta, vinculación de correo y cierre de sesión
-  ui/screens/patient  Hoy, medicamentos, jardín, historial y acompañante
+  ui/screens/patient  Hoy, medicamentos, consulta CIMA, jardín, historial y acompañante
   ui/screens/companion Panel y vinculación del acompañante
   ui/screens/shared   Carga, error y bloqueo biométrico
   ui/theme            Tema Sereno clínico
@@ -172,7 +192,7 @@ functions/             Cloud Functions que envían los push
 - `data/local`, Firebase Auth/Firestore y `AlarmScheduler`: fuentes de datos remotas, locales y del dispositivo.
 - `ui/theme`, `ui/components` y `util`: elementos transversales de interfaz y utilidades.
 
-La API externa es Firebase (Authentication, Cloud Firestore, Cloud Messaging y Cloud Functions). El almacenamiento local usa DataStore para preferencias, la caché offline de Firestore para los datos de dominio y SharedPreferences para el widget.
+Las APIs externas son Firebase (Authentication, Cloud Firestore, Cloud Messaging y Cloud Functions) y la API REST de CIMA/AEMPS mediante Retrofit. El almacenamiento local usa DataStore para preferencias, la caché offline de Firestore para los datos de dominio y SharedPreferences para el widget.
 
 ## Datos en Firestore
 
@@ -195,12 +215,14 @@ pairingInvites/{code}
 - Una cuenta anónima sin correo vinculado pierde el acceso a sus datos si se desinstala la app o se cierra sesión. La app advierte y permite vincular un correo desde Ajustes.
 - Los push requieren el plan Blaze y las Cloud Functions desplegadas. Mientras no se desplieguen, los recordatorios solo se ven dentro de la app.
 - Android no entrega push si el usuario fuerza la detención de la app desde Ajustes; cerrarla desde recientes sí permite la entrega.
+- La consulta CIMA depende de la disponibilidad del servicio de la AEMPS. La información es de referencia y no sustituye una receta ni una consulta médica.
+- La biometría depende del sensor y de que haya una huella o rostro inscrito en el dispositivo.
 - El modo acompañante requiere que el paciente haya abierto la app al menos una vez para crear su perfil y sus tomas del día.
 - El historial del acompañante se limita al día actual.
 
 ## Evidencias
 
-Las capturas de la verificación funcional están en `evidencias/`. Incluyen selección de rol, onboarding, editor de medicamentos, widget y bloqueo biométrico, además de inicio de sesión, ajustes, QR, regeneración con invalidación del código anterior, vinculación de acompañante, recordatorios y canales de notificación con sonido y vibración.
+Las capturas de la verificación funcional están en `evidencias/`. Incluyen selección de rol, onboarding, editor de medicamentos, widget, biometría después del login, inicio de sesión, ajustes, QR, regeneración con invalidación del código anterior, vinculación de acompañante, recordatorios, canales de notificación con sonido y vibración, y la consulta de medicamentos con CIMA: resultados, ficha, sin resultados y error de conexión.
 
 ## Documentación para el equipo
 

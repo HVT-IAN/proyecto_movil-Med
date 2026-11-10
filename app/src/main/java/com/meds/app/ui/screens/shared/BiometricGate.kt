@@ -2,6 +2,7 @@ package com.meds.app.ui.screens.shared
 
 import android.content.Context
 import android.content.ContextWrapper
+import android.os.SystemClock
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
@@ -20,10 +21,12 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -33,10 +36,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.meds.app.ui.components.MedsWordmark
 import com.meds.app.ui.components.PrimaryActionButton
 
 private const val ALLOWED_AUTHENTICATORS = BiometricManager.Authenticators.BIOMETRIC_WEAK
+private const val RELOCK_AFTER_MS = 5 * 60 * 1000L
 
 @Composable
 fun BiometricGate(
@@ -54,6 +61,40 @@ fun BiometricGate(
     }
     var prompting by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var backgroundedAt by rememberSaveable { mutableStateOf(0L) }
+    val currentUnlocked by rememberUpdatedState(unlocked)
+    val currentPrompting by rememberUpdatedState(prompting)
+    val currentCanAuthenticate by rememberUpdatedState(canAuthenticate)
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    if (currentUnlocked && currentCanAuthenticate && !currentPrompting) {
+                        backgroundedAt = SystemClock.elapsedRealtime()
+                    }
+                }
+
+                Lifecycle.Event.ON_START -> {
+                    if (
+                        currentUnlocked &&
+                        backgroundedAt > 0L &&
+                        SystemClock.elapsedRealtime() - backgroundedAt >= RELOCK_AFTER_MS
+                    ) {
+                        unlocked = false
+                        error = null
+                    }
+                    backgroundedAt = 0L
+                }
+
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
 
     fun requestAuthentication() {
         if (activity == null || prompting) return
