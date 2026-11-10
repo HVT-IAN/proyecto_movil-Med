@@ -153,7 +153,7 @@ fun CompanionApp(
                             .setDesiredBarcodeFormats("QR_CODE")
                             .setPrompt("Escanea el código de MEDs")
                             .setBeepEnabled(false)
-                            .setOrientationLocked(false)
+                            .setOrientationLocked(true)
                     )
                 },
                 onManual = { showManualDialog = true },

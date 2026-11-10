@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.QrCode2
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Verified
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
@@ -47,6 +48,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -54,6 +56,7 @@ import com.meds.app.data.model.CompanionLink
 import com.meds.app.ui.components.InfoRow
 import com.meds.app.ui.components.MedsCard
 import com.meds.app.ui.components.PrimaryActionButton
+import com.meds.app.ui.components.SecondaryActionButton
 import com.meds.app.ui.components.SectionLabel
 import com.meds.app.ui.components.TextActionButton
 import com.meds.app.ui.theme.LocalMedsColors
@@ -92,6 +95,14 @@ fun PatientCompanionScreen(
         if (message != null) {
             snackbarHostState.showSnackbar(message)
             viewModel.clearError()
+        }
+    }
+
+    LaunchedEffect(state.infoMessage) {
+        val message = state.infoMessage
+        if (message != null) {
+            snackbarHostState.showSnackbar(message)
+            viewModel.clearInfo()
         }
     }
 
@@ -237,6 +248,30 @@ fun PatientCompanionScreen(
                                 }
                             },
                             modifier = Modifier.align(Alignment.CenterHorizontally)
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        SecondaryActionButton(
+                            text = if (state.generating) {
+                                "Generando..."
+                            } else {
+                                "Generar nuevo QR"
+                            },
+                            onClick = {
+                                viewModel.generateInvite(
+                                    patientName = patientName,
+                                    previousCode = activeInvite.code
+                                )
+                            },
+                            enabled = !state.generating,
+                            icon = Icons.Outlined.Refresh
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(
+                            text = "Al generar uno nuevo, el código actual deja de funcionar.",
+                            modifier = Modifier.align(Alignment.CenterHorizontally),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }

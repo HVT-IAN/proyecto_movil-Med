@@ -17,6 +17,7 @@ import com.meds.app.ui.screens.onboarding.OnboardingScreen
 import com.meds.app.ui.screens.patient.PatientApp
 import com.meds.app.ui.screens.role.RoleScreen
 import com.meds.app.ui.screens.settings.AccountUiState
+import com.meds.app.ui.screens.shared.BiometricGate
 import com.meds.app.ui.screens.shared.LoadingScreen
 
 @Composable
@@ -113,20 +114,22 @@ fun MedsRoot(
                 authError = state.authError,
                 authNotice = state.authNotice
             )
-            if (role == UserRole.PATIENT) {
-                PatientApp(
-                    account = account,
-                    onLinkEmail = viewModel::linkEmail,
-                    onSignOut = viewModel::signOut,
-                    onClearAuthMessages = viewModel::clearAuthMessages
-                )
-            } else {
-                CompanionApp(
-                    account = account,
-                    onLinkEmail = viewModel::linkEmail,
-                    onSignOut = viewModel::signOut,
-                    onClearAuthMessages = viewModel::clearAuthMessages
-                )
+            BiometricGate {
+                if (role == UserRole.PATIENT) {
+                    PatientApp(
+                        account = account,
+                        onLinkEmail = viewModel::linkEmail,
+                        onSignOut = viewModel::signOut,
+                        onClearAuthMessages = viewModel::clearAuthMessages
+                    )
+                } else {
+                    CompanionApp(
+                        account = account,
+                        onLinkEmail = viewModel::linkEmail,
+                        onSignOut = viewModel::signOut,
+                        onClearAuthMessages = viewModel::clearAuthMessages
+                    )
+                }
             }
         }
     }

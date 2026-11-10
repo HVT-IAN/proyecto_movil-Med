@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.meds.app.data.model.CompanionDay
 import com.meds.app.data.model.LinkedPatient
 import com.meds.app.data.repository.CompanionRepository
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -77,6 +79,18 @@ class CompanionViewModel(application: Application) : AndroidViewModel(applicatio
         } else {
             repository.observePatientDay(patient.uid, date)
                 .map<CompanionDay, CompanionDay?> { it }
+                .retryWhen { cause, attempt ->
+                    val permissionDenied = (cause as? FirebaseFirestoreException)?.code ==
+                        FirebaseFirestoreException.Code.PERMISSION_DENIED
+                    if (permissionDenied && attempt < 3) {
+                        // La escritura local del vínculo puede emitirse antes de que
+                        // Firestore confirme el lote y aplique las reglas.
+                        delay(700L * (attempt + 1))
+                        true
+                    } else {
+                        false
+                    }
+                }
                 .catch { throwable ->
                     extras.update { it.copy(error = accessError(throwable)) }
                     emit(null)

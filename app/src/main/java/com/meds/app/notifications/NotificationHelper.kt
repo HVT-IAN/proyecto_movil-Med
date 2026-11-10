@@ -15,6 +15,11 @@ import com.meds.app.R
 object NotificationHelper {
     const val CHANNEL_REMINDERS = "meds_reminders"
     const val CHANNEL_NUDGES = "meds_nudges"
+    const val CHANNEL_NUDGES_V2 = "meds_nudges_v2"
+    const val CHANNEL_COMPANIONS = "meds_companions"
+
+    private const val NOTIFICATION_ID_NUDGE = 2001
+    private const val NOTIFICATION_ID_COMPANION = 2002
 
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -37,7 +42,27 @@ object NotificationHelper {
                 description = "Avisos que envían las personas que te acompañan"
             }
 
-            manager.createNotificationChannels(listOf(reminders, nudges))
+            val nudgesV2 = NotificationChannel(
+                CHANNEL_NUDGES_V2,
+                "Recordatorios de acompañantes",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Recordatorios con sonido y vibración de tus acompañantes"
+                enableVibration(true)
+                enableLights(true)
+            }
+
+            val companions = NotificationChannel(
+                CHANNEL_COMPANIONS,
+                "Vinculación de acompañantes",
+                NotificationManager.IMPORTANCE_HIGH
+            ).apply {
+                description = "Avisos cuando una persona se vincula como acompañante"
+                enableVibration(true)
+                enableLights(true)
+            }
+
+            manager.createNotificationChannels(listOf(reminders, nudges, nudgesV2, companions))
         }
     }
 
@@ -112,5 +137,84 @@ object NotificationHelper {
             .build()
 
         manager.notify(logId.hashCode(), notification)
+    }
+
+    fun showNudge(
+        context: Context,
+        nudgeId: String,
+        fromName: String,
+        message: String
+    ) {
+        val manager = NotificationManagerCompat.from(context)
+        if (!manager.areNotificationsEnabled()) return
+
+        val safeName = fromName.trim().ifBlank { "Tu acompañante" }
+        val safeMessage = message.trim().ifBlank {
+            "Tu acompañante te envió un recordatorio."
+        }
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_NOTIFICATION_TYPE, NOTIFICATION_TYPE_NUDGE)
+            putExtra(EXTRA_NUDGE_ID, nudgeId)
+        }
+        val openPendingIntent = PendingIntent.getActivity(
+            context,
+            nudgeId.hashCode(),
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_NUDGES_V2)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Recordatorio de $safeName")
+            .setContentText(safeMessage)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(safeMessage))
+            .setContentIntent(openPendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
+            .build()
+
+        manager.notify(NOTIFICATION_ID_NUDGE, notification)
+    }
+
+    fun showCompanionLinked(
+        context: Context,
+        companionUid: String,
+        companionName: String
+    ) {
+        val manager = NotificationManagerCompat.from(context)
+        if (!manager.areNotificationsEnabled()) return
+
+        val safeName = companionName.trim().ifBlank { "Tu acompañante" }
+        val body = "$safeName ahora puede ver tus tomas del día."
+        val openIntent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_NOTIFICATION_TYPE, NOTIFICATION_TYPE_COMPANION_LINKED)
+            putExtra(EXTRA_COMPANION_UID, companionUid)
+        }
+        val openPendingIntent = PendingIntent.getActivity(
+            context,
+            companionUid.hashCode(),
+            openIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val notification = NotificationCompat.Builder(context, CHANNEL_COMPANIONS)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Nuevo acompañante")
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(openPendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_SOCIAL)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
+            .build()
+
+        manager.notify(NOTIFICATION_ID_COMPANION, notification)
     }
 }

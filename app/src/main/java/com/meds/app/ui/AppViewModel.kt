@@ -11,6 +11,7 @@ import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
+import com.google.firebase.messaging.FirebaseMessaging
 import com.meds.app.data.local.PreferencesStore
 import com.meds.app.data.repository.AuthRepository
 import com.meds.app.data.repository.UserRepository
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
 
 enum class UserRole {
@@ -215,6 +217,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         restoreJob = null
         profileRestoredForUid = null
         viewModelScope.launch {
+            val uid = authRepository.currentUserId
+            if (uid != null) {
+                runCatching {
+                    withTimeoutOrNull(3_000) {
+                        val token = FirebaseMessaging.getInstance().token.await()
+                        userRepository.deleteDeviceToken(uid, token)
+                    }
+                }
+            }
             authRepository.signOut()
             preferences.clearAll()
             _state.update { AppUiState(loading = false) }

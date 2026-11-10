@@ -36,6 +36,29 @@ class UserRepository(
         reference.set(data, SetOptions.merge()).await()
     }
 
+    suspend fun saveDeviceToken(uid: String, token: String) {
+        if (uid.isBlank() || token.isBlank()) return
+        firestore.collection("users").document(uid)
+            .collection("devices").document(token)
+            .set(
+                mapOf(
+                    "token" to token,
+                    "platform" to "android",
+                    "updatedAt" to FieldValue.serverTimestamp()
+                ),
+                SetOptions.merge()
+            )
+            .await()
+    }
+
+    suspend fun deleteDeviceToken(uid: String, token: String) {
+        if (uid.isBlank() || token.isBlank()) return
+        firestore.collection("users").document(uid)
+            .collection("devices").document(token)
+            .delete()
+            .await()
+    }
+
     suspend fun loadProfile(uid: String): UserProfile? {
         val snapshot = firestore.collection("users").document(uid).get().await()
         if (!snapshot.exists()) return null

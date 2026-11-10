@@ -65,7 +65,10 @@ fun MedicationEditorScreen(
     viewModel: PatientViewModel,
     medication: Medication?,
     schedule: Schedule?,
-    onDone: () -> Unit
+    onDone: () -> Unit,
+    selectedName: String? = null,
+    onOpenInfo: (String) -> Unit = {},
+    onConsumeSelectedName: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -84,6 +87,13 @@ fun MedicationEditorScreen(
         if (state.saveSuccess) {
             viewModel.consumeSaveSuccess()
             onDone()
+        }
+    }
+
+    LaunchedEffect(selectedName) {
+        if (selectedName != null) {
+            name = selectedName.take(60)
+            onConsumeSelectedName()
         }
     }
 
@@ -152,6 +162,17 @@ fun MedicationEditorScreen(
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                )
+                Spacer(Modifier.height(4.dp))
+                TextActionButton(
+                    text = "Consultar medicamento",
+                    onClick = { onOpenInfo(name) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Text(
+                    text = "Busca información oficial de la CIMA/AEMPS.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
