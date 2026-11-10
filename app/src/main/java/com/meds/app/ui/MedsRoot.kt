@@ -23,6 +23,7 @@ import com.meds.app.ui.screens.shared.BiometricGate
 import com.meds.app.ui.screens.shared.BiometricOptInDialog
 import com.meds.app.ui.screens.shared.LoadingScreen
 import com.meds.app.ui.screens.shared.isBiometricAvailable
+import com.meds.app.ui.screens.shared.isDeviceCredentialAvailable
 import kotlinx.coroutines.delay
 
 @Composable
@@ -34,6 +35,8 @@ fun MedsRoot(
     val role = state.role
     val context = LocalContext.current
     val biometricAvailable = remember(context) { isBiometricAvailable(context) }
+    val deviceCredentialAvailable = remember(context) { isDeviceCredentialAvailable(context) }
+    val protectionAvailable = biometricAvailable || deviceCredentialAvailable
     var authMode by rememberSaveable { mutableStateOf(AuthMode.LOGIN) }
     var showAnonymousWarning by rememberSaveable { mutableStateOf(false) }
     var splashVisible by rememberSaveable { mutableStateOf(true) }
@@ -50,8 +53,8 @@ fun MedsRoot(
         }
     }
 
-    LaunchedEffect(biometricAvailable, state.biometricAsked) {
-        if (!state.biometricAsked && !biometricAvailable) {
+    LaunchedEffect(protectionAvailable, state.biometricAsked) {
+        if (!state.biometricAsked && !protectionAvailable) {
             viewModel.markBiometricAsked()
         }
     }
@@ -124,11 +127,16 @@ fun MedsRoot(
                 isAnonymous = state.isAnonymous,
                 biometricEnabled = state.biometricEnabled,
                 biometricAvailable = biometricAvailable,
+                deviceCredentialAvailable = deviceCredentialAvailable,
                 authLoading = state.authLoading,
                 authError = state.authError,
                 authNotice = state.authNotice
             )
-            BiometricGate(enabled = state.biometricEnabled) {
+            BiometricGate(
+                enabled = state.biometricEnabled,
+                isAnonymous = state.isAnonymous,
+                onSignOut = viewModel::signOut
+            ) {
                 if (state.loading) {
                     LoadingScreen()
                 } else if (role == UserRole.PATIENT) {
@@ -149,7 +157,7 @@ fun MedsRoot(
                     )
                 }
             }
-            if (!state.biometricAsked && biometricAvailable) {
+            if (!state.biometricAsked && protectionAvailable) {
                 BiometricOptInDialog(
                     onEnable = { viewModel.setBiometricEnabled(true) },
                     onDismiss = viewModel::markBiometricAsked

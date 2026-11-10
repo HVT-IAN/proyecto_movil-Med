@@ -367,7 +367,7 @@ def build():
     story.append(H2("1.3 Cambios de la versión 1.1"))
     story += BULLETS([
         "Consulta de medicamentos con la API REST pública de CIMA/AEMPS mediante Retrofit, con búsqueda, resultados, ficha, documentos y manejo de errores.",
-        "La biometría ya no se pide antes del login: protege el espacio después de autenticarse y completar el onboarding.",
+        "El bloqueo con huella, rostro o PIN es opcional y ya no se pide antes del login: protege el espacio después de autenticarse y completar el onboarding.",
         "Tiempo de gracia de 5 minutos al volver del segundo plano, para no interrumpir cambios rápidos entre apps.",
         "Regeneración de QR que invalida el código anterior, con aviso y rechazo del código usado.",
         "Push de recordatorios y de vinculación con canales de alta importancia, sonido y vibración.",
@@ -387,13 +387,15 @@ def build():
         "La cuenta anónima se puede vincular a un correo desde Ajustes; la vinculación conserva el mismo uid y los datos.",
         "El registro y el login restauran el rol y el nombre desde Firestore.",
     ])
-    story.append(H2("2.3 Biometría"))
+    story.append(H2("2.3 Bloqueo con huella, rostro o PIN"))
     story += BULLETS([
-        "La app pregunta una sola vez si el usuario quiere desbloquear con huella o rostro; la elección se puede cambiar en Ajustes.",
-        "Si el usuario la activa, se pide al entrar a un espacio ya creado, no en la pantalla de login.",
-        "Si el dispositivo no tiene biometría inscrita, la app no bloquea.",
+        "La app pregunta una sola vez si el usuario quiere bloquear MEDS con huella, rostro o el PIN del teléfono; la elección se puede cambiar en Ajustes.",
+        "Si el usuario lo activa, se pide al entrar a un espacio ya creado, no en la pantalla de login.",
+        "Si la huella falla o queda bloqueada, se puede usar el PIN, patrón o contraseña del teléfono.",
+        "La pantalla de bloqueo permite cerrar sesión como salida de emergencia.",
+        "Si el dispositivo no tiene biometría ni PIN configurado, la app no bloquea.",
         "Si la app vuelve del segundo plano después de 5 minutos, se pide de nuevo.",
-        "Los cambios rápidos entre apps no vuelven a pedir huella.",
+        "Los cambios rápidos entre apps no vuelven a pedir desbloqueo.",
         "Al cerrar sesión se vuelve al login sin solicitud biométrica.",
     ])
     story.append(H2("2.4 Paciente"))
@@ -581,8 +583,8 @@ class MedicationInfoRepository(
     story.append(P("La rúbrica pide tres funcionalidades entre PDF, QR, cámara/galería, biometría, audio o widget. MEDs implementa QR (generar y escanear), biometría y widget. Además incluye alarmas, notificaciones locales y push con FCM como extras."))
     story.append(H2("7.1 QR para vincular al acompañante"))
     story.append(P("El paciente genera una invitación con QrCodeGenerator (ZXing) y la muestra como QR con el contenido meds://pair?code=XXXXXXXX. El acompañante puede escanearlo con ZXing Embedded o escribir el código de 8 caracteres. La invitación dura 10 minutos, es de un solo uso y las reglas validan que el paciente sea el dueño. Generar nuevo QR invalida el código anterior."))
-    story.append(H2("7.2 Biometría después del login"))
-    story.append(P("BiometricGate envuelve el contenido autenticado y con onboarding completo, no la pantalla de login. Usa BiometricPrompt con BIOMETRIC_WEAK. Tras el onboarding, la app pregunta una sola vez si el usuario quiere usar huella o rostro, y la preferencia se puede cambiar en Ajustes. Si la opción está activa y el dispositivo tiene biometría inscrita, pide desbloqueo al entrar al espacio; si está desactivada o no hay biometría, la app abre sin bloquear."))
+    story.append(H2("7.2 Bloqueo con huella, rostro o PIN"))
+    story.append(P("BiometricGate envuelve el contenido autenticado y con onboarding completo, no la pantalla de login. Usa BiometricPrompt con BIOMETRIC_WEAK y, según la versión de Android, permite el PIN del dispositivo como respaldo. Tras el onboarding, la app pregunta una sola vez si el usuario quiere proteger MEDS, y la preferencia se puede cambiar en Ajustes. Si la opción está activa, pide desbloqueo al entrar; si la huella falla o queda bloqueada, el usuario puede usar el PIN del teléfono o cerrar sesión desde la misma pantalla."))
     story.append(P("Un LifecycleEventObserver registra cuándo la app pasa a segundo plano. Al volver, si pasaron 5 minutos o más, se vuelve a bloquear; si fue un cambio rápido, no interrumpe. Es un equilibrio entre privacidad y la baja fricción que necesita una persona con TDAH."))
     story.append(CODE("""
 private const val RELOCK_AFTER_MS = 5 * 60 * 1000L
@@ -716,8 +718,8 @@ Lifecycle.Event.ON_START -> {
         ["¿Por qué CIMA y no openFDA?", "CIMA es la API oficial española, devuelve datos en español y encaja con la app; openFDA quedó como alternativa documentada."],
         ["¿Por qué no Room?", "Firestore es la fuente de verdad y ya tiene caché offline; DataStore cubre preferencias. La consulta CIMA es información de referencia y no se persiste."],
         ["¿Cómo funciona sin conexión?", "Firestore conserva la caché; CIMA muestra un error de red claro y permite reintentar."],
-        ["¿Cómo se protege la privacidad?", "Reglas de Firestore, invitaciones de un solo uso y biometría después del login."],
-        ["¿Cuándo se pide la biometría?", "La app pregunta una sola vez después del onboarding si quieres usarla, y se puede cambiar en Ajustes. Si está activa, se pide al entrar al espacio y tras 5 minutos en segundo plano."],
+        ["¿Cómo se protege la privacidad?", "Reglas de Firestore, invitaciones de un solo uso y bloqueo opcional con huella, rostro o PIN."],
+        ["¿Cuándo se pide el desbloqueo?", "La app pregunta una sola vez después del onboarding si quieres bloquearla, y se puede cambiar en Ajustes. Si está activo, se pide al entrar y tras 5 minutos en segundo plano; si la huella falla, se usa el PIN del teléfono."],
         ["¿Qué pasa al cerrar sesión?", "Se limpian las preferencias; una cuenta con correo se recupera al iniciar sesión; una anónima sin vincular se pierde y la UI lo advierte."],
         ["¿Qué falta?", "Desplegar Functions/Blaze para el push real y probar el release en el dispositivo físico."],
     ], [135, CONTENT_WIDTH - 135]))

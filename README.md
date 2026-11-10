@@ -24,7 +24,7 @@ Aplicación Android nativa para recordar medicamentos, pensada para personas con
 - DataStore para preferencias locales.
 - AlarmManager y notificaciones locales.
 - ZXing para generar y escanear el QR.
-- Autenticación biométrica con androidx.biometric.
+- Autenticación biométrica opcional con androidx.biometric y respaldo con el PIN del teléfono.
 - Widget de escritorio con la próxima toma.
 - Sin Room, Hilt ni NanoHTTPD.
 
@@ -121,7 +121,7 @@ La variante de emulador no registra tokens FCM ni permite probar push; para eso 
 1. Abrir la app. Si no hay sesión, iniciar sesión con correo y contraseña, crear una cuenta o continuar sin cuenta. El modo anónimo muestra una advertencia y puede vincularse a un correo más adelante desde Ajustes.
 2. Elegir el rol de paciente o acompañante. La flecha superior derecha permite volver.
 3. Escribir el nombre y completar la introducción.
-4. Al entrar al espacio, si el dispositivo tiene biometría inscrita, desbloquear con huella o rostro. La biometría no se pide antes del login.
+4. Al entrar al espacio, la app pregunta una sola vez si quieres bloquearla con huella, rostro o el PIN del teléfono. Si lo activas, se pide al abrir; si no, entra directo.
 5. Como paciente, agregar un medicamento con una o varias horas.
 6. En el editor, usar `Consultar medicamento` para buscar información oficial en CIMA/AEMPS.
 7. Confirmar o posponer las tomas del día desde Hoy.
@@ -137,12 +137,14 @@ La variante de emulador no registra tokens FCM ni permite probar push; para eso 
 - Al iniciar sesión en otro dispositivo, el rol y el nombre se recuperan desde Firestore.
 - Cerrar sesión borra las preferencias locales. Si la cuenta es anónima y no se vinculó un correo, no se puede volver a acceder a esos datos.
 
-## Biometría
+## Bloqueo con huella, rostro o PIN
 
-- La biometría protege el espacio ya creado, no la pantalla de autenticación.
-- Se pide al entrar al espacio y se vuelve a pedir después de 5 minutos en segundo plano.
-- Los cambios rápidos entre apps no vuelven a pedir huella.
-- Si el dispositivo no tiene huella o rostro inscrito, la app no bloquea.
+- La protección es opcional: se pregunta una sola vez después del onboarding y se puede cambiar en Ajustes → Seguridad.
+- Si se activa, se pide al entrar al espacio y se vuelve a pedir después de 5 minutos en segundo plano.
+- Si la huella falla o queda bloqueada, se puede usar el PIN, patrón o contraseña del teléfono.
+- La pantalla de bloqueo también permite cerrar sesión como salida de emergencia.
+- Los cambios rápidos entre apps no vuelven a pedir desbloqueo.
+- Si el dispositivo no tiene huella, rostro ni PIN configurado, la app no bloquea.
 
 ## Widget de próxima toma
 
@@ -244,7 +246,7 @@ pairingInvites/{code}
 - Los push requieren el plan Blaze y las Cloud Functions desplegadas. Mientras no se desplieguen, los recordatorios solo se ven dentro de la app.
 - Android no entrega push si el usuario fuerza la detención de la app desde Ajustes; cerrarla desde recientes sí permite la entrega.
 - La consulta CIMA depende de la disponibilidad del servicio de la AEMPS. La información es de referencia y no sustituye una receta ni una consulta médica.
-- La biometría depende del sensor y de que haya una huella o rostro inscrito en el dispositivo.
+- El bloqueo depende del sensor o del PIN configurado en el dispositivo.
 - El modo acompañante requiere que el paciente haya abierto la app al menos una vez para crear su perfil y sus tomas del día.
 - El historial del acompañante se limita al día actual.
 

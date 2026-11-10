@@ -1,5 +1,9 @@
 package com.meds.app.ui.screens.settings
 
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -63,6 +67,7 @@ import com.meds.app.ui.components.LabelValue
 import com.meds.app.ui.components.MedsCard
 import com.meds.app.ui.components.PrimaryActionButton
 import com.meds.app.ui.components.SectionLabel
+import com.meds.app.ui.screens.shared.createDeviceCredentialIntent
 import com.meds.app.ui.screens.shared.findFragmentActivity
 import com.meds.app.ui.screens.shared.requestBiometricAuthentication
 import com.meds.app.ui.theme.LocalMedsColors
@@ -75,6 +80,7 @@ data class AccountUiState(
     val isAnonymous: Boolean = false,
     val biometricEnabled: Boolean = false,
     val biometricAvailable: Boolean = true,
+    val deviceCredentialAvailable: Boolean = false,
     val authLoading: Boolean = false,
     val authError: String? = null,
     val authNotice: String? = null
@@ -115,6 +121,17 @@ fun AccountSettingsScreen(
     val context = LocalContext.current
     val activity = remember(context) { context.findFragmentActivity() }
     var biometricError by remember { mutableStateOf<String?>(null) }
+
+    val pinLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            biometricError = null
+            onBiometricChange(true)
+        } else {
+            biometricError = "No se confirmó el PIN. Intenta de nuevo."
+        }
+    }
 
     val emailValid = isValidEmail(linkEmail)
     val passwordValid = linkPassword.length >= 6
@@ -285,19 +302,20 @@ fun AccountSettingsScreen(
                     Spacer(Modifier.width(12.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Desbloquear con huella o rostro",
+                            text = "Bloquear MEDS al abrir",
                             style = MaterialTheme.typography.titleSmall,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
                             text = when {
-                                !account.biometricAvailable ->
-                                    "No disponible en este dispositivo."
+                                !account.biometricAvailable &&
+                                    !account.deviceCredentialAvailable ->
+                                    "Configura una huella, rostro o PIN en el teléfono."
                                 account.biometricEnabled ->
-                                    "Activado. Se pedirá al abrir MEDS."
+                                    "Activado. Se pedirá huella, rostro o PIN al abrir."
                                 else ->
-                                    "Desactivado. MEDS abre sin biometría."
+                                    "Desactivado. MEDS abre sin bloqueo."
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -306,23 +324,52 @@ fun AccountSettingsScreen(
                     Spacer(Modifier.width(8.dp))
                     Switch(
                         checked = account.biometricEnabled,
-                        enabled = account.biometricAvailable,
+                        enabled = account.biometricAvailable ||
+                            account.deviceCredentialAvailable,
                         onCheckedChange = { checked ->
                             biometricError = null
                             if (!checked) {
                                 onBiometricChange(false)
                             } else {
                                 val currentActivity = activity
-                                if (currentActivity == null) {
-                                    biometricError = "No se encontró el sensor de biometría."
-                                } else {
+                                if (account.biometricAvailable && currentActivity != null) {
                                     requestBiometricAuthentication(
                                         activity = currentActivity,
-                                        title = "Activa el desbloqueo",
-                                        subtitle = "Confirma tu huella o rostro para activarlo",
+                                        title = "Activa el bloqueo",
+                                        subtitle = "Confirma con huella, rostro o PIN",
                                         onSuccess = { onBiometricChange(true) },
-                                        onError = { message -> biometricError = message }
+                                        onFailed = {},
+                                        onError = { code, message ->
+                                            if (
+                                                code == BiometricPrompt.ERROR_LOCKOUT ||
+                                                code == BiometricPrompt.ERROR_LOCKOUT_PERMANENT
+                                            ) {
+                                                val intent = createDeviceCredentialIntent(context)
+                                                if (intent != null) {
+                                                    pinLauncher.launch(intent)
+                                                } else {
+                                                    biometricError =
+                                                        "No hay PIN configurado. Espera 30 segundos."
+                                                }
+                                            } else if (
+                                                code != BiometricPrompt.ERROR_NEGATIVE_BUTTON &&
+                                                code != BiometricPrompt.ERROR_USER_CANCELED
+                                            ) {
+                                                biometricError = message
+                                            }
+                                        }
                                     )
+                                } else if (account.deviceCredentialAvailable) {
+                                    val intent = createDeviceCredentialIntent(context)
+                                    if (intent != null) {
+                                        pinLauncher.launch(intent)
+                                    } else {
+                                        biometricError =
+                                            "No se pudo abrir la pantalla del PIN."
+                                    }
+                                } else {
+                                    biometricError =
+                                        "Configura una huella o un PIN en el teléfono."
                                 }
                             }
                         }
