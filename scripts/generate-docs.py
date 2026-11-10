@@ -34,6 +34,10 @@ TOP = 58
 BOTTOM = 54
 CONTENT_WIDTH = PAGE_WIDTH - LEFT - RIGHT
 
+TEAM = "Ian Oscani Diaz Vazquez, Carlos Adrian Alarcon Valencia"
+UNIVERSITY = "Universidad Politécnica de Chiapas"
+DATE_TEXT = "9 de noviembre de 2026"
+
 styles = getSampleStyleSheet()
 
 cover_title = ParagraphStyle(
@@ -61,6 +65,30 @@ cover_sub = ParagraphStyle(
     fontSize=12,
     leading=18,
     textColor=MUTED,
+)
+cover_university = ParagraphStyle(
+    "CoverUniversity",
+    parent=styles["BodyText"],
+    fontName="Helvetica-Bold",
+    fontSize=12,
+    leading=16,
+    textColor=TEAL,
+)
+cover_team_label = ParagraphStyle(
+    "CoverTeamLabel",
+    parent=styles["BodyText"],
+    fontName="Helvetica-Bold",
+    fontSize=8,
+    leading=12,
+    textColor=MUTED,
+)
+cover_team = ParagraphStyle(
+    "CoverTeam",
+    parent=styles["BodyText"],
+    fontName="Helvetica",
+    fontSize=10.5,
+    leading=15,
+    textColor=DARK,
 )
 h1 = ParagraphStyle(
     "H1Custom",
@@ -232,7 +260,7 @@ def header_footer(canvas, doc):
     canvas.drawString(LEFT, PAGE_HEIGHT - 30, "MEDs - Documentación funcional y técnica")
     canvas.drawRightString(PAGE_WIDTH - RIGHT, PAGE_HEIGHT - 30, "Versión 1.1")
     canvas.line(LEFT, 36, PAGE_WIDTH - RIGHT, 36)
-    canvas.drawString(LEFT, 26, "MEDs 1.1 - Noviembre 2026")
+    canvas.drawString(LEFT, 26, f"MEDs 1.1 - {DATE_TEXT}")
     canvas.drawRightString(PAGE_WIDTH - RIGHT, 26, f"Página {doc.page}")
     canvas.restoreState()
 
@@ -248,7 +276,7 @@ def cover_page(canvas, doc):
     canvas.drawString(LEFT, PAGE_HEIGHT - 116, "Recordatorios de medicación, sin ruido")
     canvas.setFillColor(MUTED)
     canvas.setFont("Helvetica", 8)
-    canvas.drawString(LEFT, 26, "MEDs 1.1 - Noviembre 2026")
+    canvas.drawString(LEFT, 26, f"MEDs 1.1 - {DATE_TEXT}")
     canvas.restoreState()
 
 
@@ -256,7 +284,9 @@ def build():
     story = []
 
     # Cover
-    story.append(Spacer(1, 110))
+    story.append(Spacer(1, 100))
+    story.append(Paragraph(UNIVERSITY, cover_university))
+    story.append(Spacer(1, 10))
     story.append(Paragraph("Documentación funcional y técnica", cover_heading))
     story.append(
         Paragraph(
@@ -273,11 +303,15 @@ def build():
             style=[("BACKGROUND", (0, 0), (-1, -1), TEAL)],
         )
     )
-    story.append(Spacer(1, 230))
+    story.append(Spacer(1, 60))
+    story.append(Paragraph("INTEGRANTES", cover_team_label))
+    story.append(Spacer(1, 4))
+    story.append(Paragraph(TEAM, cover_team))
+    story.append(Spacer(1, 90))
     story.append(Paragraph("Versión 1.1 - versionCode 2", ParagraphStyle(
         "CoverVersion", parent=body, fontName="Helvetica-Bold", fontSize=13, leading=18
     )))
-    story.append(Paragraph("Noviembre 2026", body))
+    story.append(Paragraph(DATE_TEXT, body))
     story.append(Paragraph("com.meds.app", small))
     story.append(PageBreak())
 
@@ -631,6 +665,9 @@ Lifecycle.Event.ON_START -> {
     story.append(H2("9.1 Estado actual"))
     story.append(T([
         ["Elemento", "Estado"],
+        ["Equipo", TEAM],
+        ["Universidad", UNIVERSITY],
+        ["Fecha de entrega", DATE_TEXT],
         ["Código fuente", "Proyecto Android completo en Kotlin/Compose."],
         ["Repositorio", "https://github.com/HVT-IAN/proyecto_movil-Med"],
         ["Ramas", "main, develop y feature/consulta-cima-biometria integrada a develop."],
@@ -816,7 +853,7 @@ firebase deploy --only functions,firestore:rules --project medsproto
         topMargin=TOP,
         bottomMargin=BOTTOM,
         title="MEDs - Documentación funcional y técnica 1.1",
-        author="Equipo MEDs",
+        author=TEAM,
         subject="Proyecto integrador - aplicación móvil",
     )
     doc.build(story, onFirstPage=cover_page, onLaterPages=header_footer)
