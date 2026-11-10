@@ -4,7 +4,7 @@ Aplicación Android nativa para recordar medicamentos, pensada para personas con
 
 ## Ramas
 
-- `main`: cascarón inicial compilable con la estructura, el tema y las pantallas base.
+- `main`: versión estable de entrega (release 1.1).
 - `develop`: desarrollo activo de la aplicación completa.
 - `feature/*`: ramas de trabajo. La consulta CIMA y la biometría se integraron desde `feature/consulta-cima-biometria`.
 
