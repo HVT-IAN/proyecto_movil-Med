@@ -3,17 +3,16 @@ package com.meds.app.data.repository
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.meds.app.domain.model.UserProfile
+import com.meds.app.domain.repository.UserRepository
 import kotlinx.coroutines.tasks.await
 
-data class UserProfile(
-    val role: String?,
-    val name: String?
-)
-
-class UserRepository(
+/** Implementación del perfil y dispositivos en Cloud Firestore. */
+class UserRepositoryImpl(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
-) {
-    suspend fun saveRole(uid: String, role: String) {
+) : UserRepository {
+
+    override suspend fun saveRole(uid: String, role: String) {
         val reference = firestore.collection("users").document(uid)
         val exists = reference.get().await().exists()
         val data = mutableMapOf<String, Any>("role" to role)
@@ -23,7 +22,7 @@ class UserRepository(
         reference.set(data, SetOptions.merge()).await()
     }
 
-    suspend fun saveProfile(uid: String, role: String, name: String) {
+    override suspend fun saveProfile(uid: String, role: String, name: String) {
         val reference = firestore.collection("users").document(uid)
         val exists = reference.get().await().exists()
         val data = mutableMapOf<String, Any>(
@@ -36,7 +35,7 @@ class UserRepository(
         reference.set(data, SetOptions.merge()).await()
     }
 
-    suspend fun saveDeviceToken(uid: String, token: String) {
+    override suspend fun saveDeviceToken(uid: String, token: String) {
         if (uid.isBlank() || token.isBlank()) return
         firestore.collection("users").document(uid)
             .collection("devices").document(token)
@@ -51,7 +50,7 @@ class UserRepository(
             .await()
     }
 
-    suspend fun deleteDeviceToken(uid: String, token: String) {
+    override suspend fun deleteDeviceToken(uid: String, token: String) {
         if (uid.isBlank() || token.isBlank()) return
         firestore.collection("users").document(uid)
             .collection("devices").document(token)
@@ -59,7 +58,7 @@ class UserRepository(
             .await()
     }
 
-    suspend fun loadProfile(uid: String): UserProfile? {
+    override suspend fun loadProfile(uid: String): UserProfile? {
         val snapshot = firestore.collection("users").document(uid).get().await()
         if (!snapshot.exists()) return null
         return UserProfile(

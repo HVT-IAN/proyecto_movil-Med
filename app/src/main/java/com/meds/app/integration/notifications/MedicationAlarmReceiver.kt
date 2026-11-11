@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.meds.app.domain.model.doseLogId
-import com.meds.app.data.repository.PatientRepository
+import com.meds.app.data.repository.PatientRepositoryImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -25,7 +25,7 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val repository = PatientRepository(context)
+                val repository = PatientRepositoryImpl(context)
                 val alreadyTaken = withTimeoutOrNull(4_000L) {
                     repository.isDoseTaken(logId)
                 } ?: false

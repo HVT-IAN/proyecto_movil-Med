@@ -425,23 +425,24 @@ def build():
 
     # 3. Arquitectura
     story.append(H1("3. Arquitectura MVVM y organización del código"))
-    story.append(P("La app separa interfaz, estado, acceso a datos y fuentes. Ninguna pantalla habla directamente con Firebase ni con CIMA: las pantallas observan un StateFlow del ViewModel y envían eventos; el ViewModel llama al Repository; el Repository encapsula el SDK, Retrofit y las reglas de negocio."))
+    story.append(P("La app separa interfaz, estado, contratos y acceso a datos. Ninguna pantalla habla directamente con Firebase ni con CIMA: las pantallas observan un StateFlow del ViewModel y envían eventos; el ViewModel depende de un contrato de domain/repository; la implementación en data/repository encapsula el SDK, Retrofit y las reglas de negocio."))
     story.append(T([
         ["Capa", "Responsabilidad", "Ejemplos"],
         ["Interfaz (Compose)", "Dibuja el estado y emite eventos; no accede a datos.", "presentation/, core/ui/components, navigation/AppNavGraph"],
         ["Estado (ViewModel)", "Expone StateFlow, lanza corrutinas y traduce errores.", "AppViewModel, PatientViewModel, MedicationInfoViewModel"],
         ["Estado visible (UiState)", "Contrato de datos de cada módulo: carga, contenido y error.", "AppUiState, PatientUiState, CompanionUiState, AccountUiState"],
-        ["Datos (Repository)", "Operaciones, batches, mapeo, reglas y Result.", "AuthRepository, PatientRepository, CompanionRepository, MedicationInfoRepository"],
+        ["Datos (Repository)", "Contratos en domain/repository e implementaciones en data/repository; batches, mapeo, reglas y Result.", "AuthRepository, PatientRepository, CompanionRepository, MedicationInfoRepository"],
         ["Fuentes", "Identidad, base de datos, API REST, preferencias y alarmas.", "FirebaseAuth, FirebaseFirestore, Retrofit, DataStore, AlarmManager"],
     ], [100, 190, CONTENT_WIDTH - 290]))
     story.append(H2("3.1 Paquetes principales"))
     story.append(T([
         ["Paquete", "Contenido"],
         ["navigation", "AppNavGraph, PatientNavGraph y Routes con destinos centralizados."],
-        ["domain/model", "Modelos inmutables de Firestore, CIMA y rol de usuario."],
+        ["domain/model", "Modelos inmutables de Firestore, CIMA, sesión y rol."],
+        ["domain/repository", "Contratos AuthRepository, UserRepository, PatientRepository, CompanionRepository y MedicationInfoRepository."],
         ["data/remote/api", "CimaApi, CimaClient y configuración de Retrofit."],
         ["data/remote/dto", "DTOs de la API de CIMA."],
-        ["data/repository", "AuthRepository, UserRepository, PatientRepository, CompanionRepository, MedicationInfoRepository y mapeos."],
+        ["data/repository", "Implementaciones *RepositoryImpl con Firestore, Firebase Auth, Retrofit y mapeos."],
         ["data/local", "PreferencesStore con DataStore: rol, nombre y onboarding."],
         ["integration/notifications", "Alarmas, canales, receptores y MedsMessagingService."],
         ["presentation/patient", "Hoy, medicamentos, consulta CIMA, jardín, historial y acompañante."],
@@ -468,10 +469,10 @@ interface CimaApi {
 }
 """))
     story.append(CODE("""
-class MedicationInfoRepository(
+class MedicationInfoRepositoryImpl(
     private val api: CimaApi = CimaClient.api
-) {
-    suspend fun search(rawQuery: String): Result<MedicationSearchResult> =
+) : MedicationInfoRepository {
+    override suspend fun search(rawQuery: String): Result<MedicationSearchResult> =
         runCatching {
             val query = rawQuery.trim()
             require(query.length >= 2) { "Escribe al menos 2 caracteres." }
@@ -489,7 +490,7 @@ class MedicationInfoRepository(
 }
 """))
     story.append(H2("3.4 Inyección de dependencias"))
-    story.append(P("La inyección es manual y explícita. Los ViewModels construyen sus repositorios o los reciben con valores por defecto. MedsApp inicializa Firebase y las alarmas. Es una decisión deliberada: la app es pequeña, las dependencias son pocas y visibles, y no se introduce Hilt para no añadir complejidad. Los repositorios aceptan FirebaseFirestore o CimaApi como parámetro, lo que permite sustituirlos en pruebas."))
+    story.append(P("La inyección es manual y explícita. Los ViewModels declaran sus dependencias con los contratos de domain/repository y, por ahora, construyen la implementación concreta de data/repository con valores por defecto. MedsApp inicializa Firebase y las alarmas. Es una decisión deliberada: la app es pequeña, las dependencias son pocas y visibles, y no se introduce Hilt para no añadir complejidad. Las implementaciones aceptan FirebaseFirestore, FirebaseAuth o CimaApi como parámetro, lo que permite sustituirlos en pruebas."))
     story.append(PageBreak())
 
     # 4. API
@@ -520,14 +521,14 @@ class MedicationInfoRepository(
     story.append(H2("4.3 Operaciones de Firebase"))
     story.append(T([
         ["Operación", "Técnica", "Dónde"],
-        ["Registro, login, vínculo y recuperación", "FirebaseAuth (correo/contraseña y anónima)", "AuthRepository"],
-        ["Observar medicamentos, horarios, tomas y planta", "Snapshots en tiempo real convertidos a Flow", "PatientRepository"],
-        ["Guardar medicamento y horario", "Batch de dos documentos", "PatientRepository"],
-        ["Marcar toma", "Batch: doseLog, planta y stock; cancela alarma", "PatientRepository"],
-        ["Invitar y vincular acompañante", "Batch + validación de invitación en reglas", "CompanionRepository"],
-        ["Enviar y leer nudges", "set / update con permisos por rol", "CompanionRepository"],
-        ["Registrar token FCM", "Set(merge) en devices/{token}", "UserRepository"],
-        ["Perfil y rol", "set(merge) en users/{uid}", "UserRepository"],
+        ["Registro, login, vínculo y recuperación", "FirebaseAuth (correo/contraseña y anónima)", "AuthRepositoryImpl"],
+        ["Observar medicamentos, horarios, tomas y planta", "Snapshots en tiempo real convertidos a Flow", "PatientRepositoryImpl"],
+        ["Guardar medicamento y horario", "Batch de dos documentos", "PatientRepositoryImpl"],
+        ["Marcar toma", "Batch: doseLog, planta y stock; cancela alarma", "PatientRepositoryImpl"],
+        ["Invitar y vincular acompañante", "Batch + validación de invitación en reglas", "CompanionRepositoryImpl"],
+        ["Enviar y leer nudges", "set / update con permisos por rol", "CompanionRepositoryImpl"],
+        ["Registrar token FCM", "Set(merge) en devices/{token}", "UserRepositoryImpl"],
+        ["Perfil y rol", "set(merge) en users/{uid}", "UserRepositoryImpl"],
     ], [155, 175, CONTENT_WIDTH - 330]))
     story.append(H2("4.4 Seguridad de los datos"))
     story.append(P("Las reglas de Firestore validan que cada usuario solo escriba sus propios documentos; el acompañante solo lee el día; las invitaciones son de un solo uso y expiran; los nudges solo los crea un acompañante vinculado; los tokens FCM solo los lee y escribe su dueño. El cliente nunca decide los permisos. La consulta CIMA es pública y no envía datos personales del usuario."))
@@ -730,11 +731,11 @@ Lifecycle.Event.ON_START -> {
     story.append(T([
         ["Tema", "Archivos"],
         ["Entrada", "MainActivity.kt, MedsApp.kt"],
-        ["Autenticación", "AuthRepository.kt, AppViewModel.kt, AuthScreen.kt"],
-        ["API CIMA", "CimaApi.kt, CimaModels.kt, MedicationInfoRepository.kt, MedicationInfoViewModel.kt"],
+        ["Autenticación", "AuthRepository.kt (contrato), AuthRepositoryImpl.kt, AppViewModel.kt, AuthScreen.kt"],
+        ["API CIMA", "CimaApi.kt, CimaModels.kt, MedicationInfoRepository.kt, MedicationInfoRepositoryImpl.kt, MedicationInfoViewModel.kt"],
         ["Consulta CIMA UI", "MedicationInfoScreen.kt, MedicationEditorScreen.kt, PatientApp.kt"],
         ["Estado del paciente", "PatientViewModel.kt"],
-        ["Firestore", "PatientRepository.kt, CompanionRepository.kt, FirestoreMappers.kt"],
+        ["Firestore", "PatientRepositoryImpl.kt, CompanionRepositoryImpl.kt, FirestoreMappers.kt"],
         ["Biometría", "integration/biometric/BiometricGate.kt, navigation/AppNavGraph.kt"],
         ["Push", "MedsMessagingService.kt, NotificationHelper.kt, functions/index.js"],
         ["Persistencia", "PreferencesStore.kt, NextDoseWidgetProvider.kt, AlarmScheduler.kt"],

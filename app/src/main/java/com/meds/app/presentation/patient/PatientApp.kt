@@ -17,7 +17,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.messaging.FirebaseMessaging
 import com.meds.app.BuildConfig
-import com.meds.app.data.repository.UserRepository
+import com.meds.app.data.repository.UserRepositoryImpl
 import com.meds.app.integration.widget.NextDoseWidgetProvider
 import com.meds.app.navigation.PatientNavGraph
 import com.meds.app.navigation.Routes
@@ -49,7 +49,7 @@ fun PatientApp(
     val currentRoute = backStackEntry?.destination?.route
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val userRepository = remember { UserRepository() }
+    val userRepository = remember { UserRepositoryImpl() }
 
     LaunchedEffect(account.userId) {
         if (BuildConfig.USE_FIREBASE_EMULATOR) return@LaunchedEffect

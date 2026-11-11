@@ -4,7 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.meds.app.domain.model.DoseLog
-import com.meds.app.data.repository.PatientRepository
+import com.meds.app.data.repository.PatientRepositoryImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -39,7 +39,7 @@ class DoseActionReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 withTimeoutOrNull(8_000L) {
-                    val repository = PatientRepository(context)
+                    val repository = PatientRepositoryImpl(context)
                     when (action) {
                         ACTION_TAKE -> repository.takeDose(doseLog, source = "NOTIFICATION")
                         ACTION_SNOOZE -> {

@@ -15,6 +15,7 @@ import com.meds.app.domain.model.LinkedPatient
 import com.meds.app.domain.model.Nudge
 import com.meds.app.domain.model.PairingInvite
 import com.meds.app.domain.model.PlantState
+import com.meds.app.domain.repository.CompanionRepository
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -26,9 +27,9 @@ import java.security.SecureRandom
 import java.util.Date
 import java.util.Locale
 
-class CompanionRepository(
+class CompanionRepositoryImpl(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
-) {
+) : CompanionRepository {
     private val auth = FirebaseAuth.getInstance()
     private val random = SecureRandom()
 
@@ -39,7 +40,7 @@ class CompanionRepository(
     private fun userRef(uid: String): DocumentReference =
         firestore.collection("users").document(uid)
 
-    fun observeCompanions(patientUid: String): Flow<List<CompanionLink>> {
+    override fun observeCompanions(patientUid: String): Flow<List<CompanionLink>> {
         if (patientUid.isBlank()) return flowOf(emptyList())
         return queryFlow(userRef(patientUid).collection("companions"))
             .map { snapshot ->
@@ -47,7 +48,7 @@ class CompanionRepository(
             }
     }
 
-    fun observeLinkedPatients(companionUid: String): Flow<List<LinkedPatient>> {
+    override fun observeLinkedPatients(companionUid: String): Flow<List<LinkedPatient>> {
         if (companionUid.isBlank()) return flowOf(emptyList())
         return queryFlow(userRef(companionUid).collection("linkedPatients"))
             .map { snapshot ->
@@ -55,7 +56,7 @@ class CompanionRepository(
             }
     }
 
-    fun observeNudges(patientUid: String): Flow<List<Nudge>> {
+    override fun observeNudges(patientUid: String): Flow<List<Nudge>> {
         if (patientUid.isBlank()) return flowOf(emptyList())
         return queryFlow(userRef(patientUid).collection("nudges"))
             .map { snapshot ->
@@ -63,7 +64,7 @@ class CompanionRepository(
             }
     }
 
-    fun observePatientDay(patientUid: String, dateKey: String): Flow<CompanionDay> {
+    override fun observePatientDay(patientUid: String, dateKey: String): Flow<CompanionDay> {
         if (patientUid.isBlank()) return flowOf(CompanionDay())
         val nameFlow = documentFlow(userRef(patientUid))
             .map { it.getString("name").orEmpty() }
@@ -95,7 +96,7 @@ class CompanionRepository(
         }
     }
 
-    suspend fun createInvite(
+    override suspend fun createInvite(
         patientUid: String,
         patientName: String
     ): Result<PairingInvite> = runCatching {
@@ -128,7 +129,7 @@ class CompanionRepository(
         error("No se pudo generar un código. Intenta de nuevo.")
     }
 
-    suspend fun invalidateInvite(code: String): Result<Unit> = runCatching {
+    override suspend fun invalidateInvite(code: String): Result<Unit> = runCatching {
         if (code.isBlank()) return@runCatching
         val inviteRef = firestore.collection("pairingInvites").document(code)
         val snapshot = inviteRef.get().await()
@@ -137,7 +138,7 @@ class CompanionRepository(
         }
     }
 
-    suspend fun linkWithCode(
+    override suspend fun linkWithCode(
         rawCode: String,
         companionName: String
     ): Result<String> = runCatching {
@@ -190,7 +191,7 @@ class CompanionRepository(
         invite.patientUid
     }
 
-    suspend fun revokeCompanion(
+    override suspend fun revokeCompanion(
         patientUid: String,
         companionUid: String
     ): Result<Unit> = runCatching {
@@ -199,7 +200,7 @@ class CompanionRepository(
             .await()
     }
 
-    suspend fun sendNudge(
+    override suspend fun sendNudge(
         patientUid: String,
         fromName: String,
         message: String
@@ -218,7 +219,7 @@ class CompanionRepository(
         ).await()
     }
 
-    suspend fun markNudgeRead(
+    override suspend fun markNudgeRead(
         patientUid: String,
         nudgeId: String
     ): Result<Unit> = runCatching {
@@ -227,7 +228,7 @@ class CompanionRepository(
             .await()
     }
 
-    suspend fun unlinkPatient(
+    override suspend fun unlinkPatient(
         companionUid: String,
         patientUid: String
     ): Result<Unit> = runCatching {

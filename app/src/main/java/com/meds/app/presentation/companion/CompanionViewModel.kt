@@ -7,7 +7,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestoreException
 import com.meds.app.domain.model.CompanionDay
 import com.meds.app.domain.model.LinkedPatient
-import com.meds.app.data.repository.CompanionRepository
+import com.meds.app.data.repository.CompanionRepositoryImpl
+import com.meds.app.domain.repository.CompanionRepository
 import com.meds.app.core.common.todayKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -34,7 +35,7 @@ private data class CompanionExtras(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class CompanionViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = CompanionRepository()
+    private val repository: CompanionRepository = CompanionRepositoryImpl()
     private val companionUid = FirebaseAuth.getInstance().currentUser?.uid
     private val extras = MutableStateFlow(CompanionExtras())
     private val currentDate = MutableStateFlow(todayKey())

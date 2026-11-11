@@ -202,10 +202,11 @@ app/src/main/java/com/meds/app
   core/ui/components  Componentes Compose reutilizables
   core/ui/theme       Tema Sereno clínico
 
-  domain/model        Modelos de Firestore y de consulta CIMA
+  domain/model        Modelos de Firestore, CIMA, sesión y rol
+  domain/repository   Contratos de autenticación, perfil, paciente, acompañante y CIMA
   data/remote/api     Cliente Retrofit de CIMA
   data/remote/dto     DTOs de la API de CIMA
-  data/repository     Autenticación, paciente, acompañante y consulta CIMA
+  data/repository     Implementaciones *RepositoryImpl y mapeos
   data/local          Preferencias con DataStore
 
   presentation/auth      Inicio de sesión, registro y advertencia anónima
@@ -230,7 +231,8 @@ functions/             Cloud Functions que envían los push
 - `presentation/*/*UiState.kt`: contrato de estado observable de cada módulo, incluidos carga, contenido y error.
 - `navigation/Routes.kt`: definición central de destinos y argumentos; las pantallas no escriben rutas a mano.
 - `navigation/*NavGraph.kt`: declaración de destinos y transiciones de cada flujo.
-- `data/repository`: capa Repository. Centraliza el acceso a datos, los batches y las reglas de negocio; convierte las respuestas a modelos.
+- `domain/repository`: contratos que consume la presentación; no conocen Firebase, Retrofit ni Android.
+- `data/repository`: implementaciones `*RepositoryImpl`. Centralizan el acceso a datos, los batches, las alarmas y las reglas de negocio.
 - `data/local`, Firebase Auth/Firestore e `integration/notifications`: fuentes de datos remotas, locales y del dispositivo.
 - `core/ui/theme`, `core/ui/components` y `core/common`: elementos transversales de interfaz y utilidades.
 

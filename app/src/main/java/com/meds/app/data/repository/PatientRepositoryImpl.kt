@@ -17,6 +17,7 @@ import com.meds.app.domain.model.MedicationDraft
 import com.meds.app.domain.model.PlantState
 import com.meds.app.domain.model.Schedule
 import com.meds.app.domain.model.doseLogId
+import com.meds.app.domain.repository.PatientRepository
 import com.meds.app.integration.notifications.AlarmScheduler
 import com.meds.app.core.common.todayKey
 import kotlinx.coroutines.channels.awaitClose
@@ -32,10 +33,10 @@ import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.Date
 
-class PatientRepository(
+class PatientRepositoryImpl(
     context: Context,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
-) {
+) : PatientRepository {
     private val appContext = context.applicationContext
     private val auth = FirebaseAuth.getInstance()
     private val alarmScheduler = AlarmScheduler(appContext)
@@ -52,36 +53,36 @@ class PatientRepository(
     private fun doseLogsRef(uid: String) = userRef(uid).collection("doseLogs")
     private fun plantRef(uid: String) = userRef(uid).collection("plant").document("state")
 
-    fun observeMedications(): Flow<List<Medication>> {
+    override fun observeMedications(): Flow<List<Medication>> {
         val uid = uidOrNull() ?: return flowOf(emptyList())
         return queryFlow(medicationsRef(uid)).map { snapshot -> snapshot.toMedications() }
     }
 
-    fun observeSchedules(): Flow<List<Schedule>> {
+    override fun observeSchedules(): Flow<List<Schedule>> {
         val uid = uidOrNull() ?: return flowOf(emptyList())
         return queryFlow(schedulesRef(uid)).map { snapshot -> snapshot.toSchedules() }
     }
 
-    fun observeDoses(dateKey: String): Flow<List<DoseLog>> {
+    override fun observeDoses(dateKey: String): Flow<List<DoseLog>> {
         val uid = uidOrNull() ?: return flowOf(emptyList())
         return queryFlow(
             doseLogsRef(uid).whereEqualTo("dateKey", dateKey)
         ).map { snapshot -> snapshot.toDoseLogs() }
     }
 
-    fun observeRecentDoses(startDateKey: String): Flow<List<DoseLog>> {
+    override fun observeRecentDoses(startDateKey: String): Flow<List<DoseLog>> {
         val uid = uidOrNull() ?: return flowOf(emptyList())
         return queryFlow(
             doseLogsRef(uid).whereGreaterThanOrEqualTo("dateKey", startDateKey)
         ).map { snapshot -> snapshot.toDoseLogs() }
     }
 
-    fun observePlant(): Flow<PlantState> {
+    override fun observePlant(): Flow<PlantState> {
         val uid = uidOrNull() ?: return flowOf(PlantState())
         return documentFlow(plantRef(uid)).map { snapshot -> snapshot.toPlantState() }
     }
 
-    suspend fun saveMedication(draft: MedicationDraft): Result<Unit> = runCatching {
+    override suspend fun saveMedication(draft: MedicationDraft): Result<Unit> = runCatching {
         val uid = uid()
         val medicationRef = if (draft.id.isNullOrBlank()) {
             medicationsRef(uid).document()
@@ -140,11 +141,11 @@ class PatientRepository(
         runCatching { ensureTodayDosesInternal(uid) }
     }
 
-    suspend fun ensureTodayDoses(): Result<Unit> = runCatching {
+    override suspend fun ensureTodayDoses(): Result<Unit> = runCatching {
         ensureTodayDosesInternal(uid())
     }
 
-    suspend fun takeDose(dose: DoseLog, source: String = "APP"): Result<Unit> = runCatching {
+    override suspend fun takeDose(dose: DoseLog, source: String): Result<Unit> = runCatching {
         val uid = uid()
         val logRef = doseLogsRef(uid).document(dose.id)
         val existing = logRef.get().await()
@@ -218,7 +219,7 @@ class PatientRepository(
         alarmScheduler.cancelDoseNotification(dose.id)
     }
 
-    suspend fun isDoseTaken(logId: String): Boolean {
+    override suspend fun isDoseTaken(logId: String): Boolean {
         if (logId.isBlank()) return false
         val uid = uidOrNull() ?: return false
         return runCatching {
@@ -227,7 +228,7 @@ class PatientRepository(
         }.getOrDefault(false)
     }
 
-    suspend fun snoozeDose(dose: DoseLog, minutes: Long = 10L): Result<Unit> = runCatching {
+    override suspend fun snoozeDose(dose: DoseLog, minutes: Long): Result<Unit> = runCatching {
         val uid = uid()
         val triggerAt = System.currentTimeMillis() + minutes * 60_000L
         val dateKey = dose.dateKey.ifBlank { todayKey() }
@@ -254,7 +255,7 @@ class PatientRepository(
         alarmScheduler.scheduleSnooze(dose.copy(scheduledAt = triggerAt, dateKey = dateKey), triggerAt)
     }
 
-    suspend fun deleteMedication(medicationId: String, scheduleId: String?): Result<Unit> = runCatching {
+    override suspend fun deleteMedication(medicationId: String, scheduleId: String?): Result<Unit> = runCatching {
         val uid = uid()
         val today = todayKey()
         val todayLogs = doseLogsRef(uid).whereEqualTo("dateKey", today).get().await()

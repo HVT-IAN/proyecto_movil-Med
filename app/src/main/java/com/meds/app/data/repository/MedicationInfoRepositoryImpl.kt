@@ -4,21 +4,18 @@ import com.meds.app.domain.model.MedicationDocument
 import com.meds.app.domain.model.MedicationInfo
 import com.meds.app.domain.model.MedicationInfoDetail
 import com.meds.app.domain.model.MedicationSearchResult
+import com.meds.app.domain.repository.MedicationInfoRepository
 import com.meds.app.data.remote.api.CimaApi
 import com.meds.app.data.remote.api.CimaClient
 import com.meds.app.data.remote.dto.CimaDetail
 import com.meds.app.data.remote.dto.CimaDoc
 import com.meds.app.data.remote.dto.CimaIngredient
 import com.meds.app.data.remote.dto.CimaMedication
-import com.google.gson.JsonParseException
-import retrofit2.HttpException
-import java.io.IOException
-import java.net.SocketTimeoutException
 
-class MedicationInfoRepository(
+class MedicationInfoRepositoryImpl(
     private val api: CimaApi = CimaClient.api
-) {
-    suspend fun search(rawQuery: String): Result<MedicationSearchResult> = runCatching {
+) : MedicationInfoRepository {
+    override suspend fun search(rawQuery: String): Result<MedicationSearchResult> = runCatching {
         val query = rawQuery.trim()
         require(query.length >= 2) { "Escribe al menos 2 caracteres para buscar." }
 
@@ -39,7 +36,7 @@ class MedicationInfoRepository(
         )
     }
 
-    suspend fun detail(registry: String): Result<MedicationInfoDetail> = runCatching {
+    override suspend fun detail(registry: String): Result<MedicationInfoDetail> = runCatching {
         require(registry.isNotBlank()) { "No se indicó el medicamento." }
         api.detail(registry).toMedicationInfoDetail()
     }
@@ -128,28 +125,5 @@ class MedicationInfoRepository(
 
     companion object {
         private const val MAX_RESULTS = 20
-    }
-}
-
-fun Throwable.toMedicationInfoMessage(): String {
-    return when (this) {
-        is IllegalArgumentException -> message ?: "Revisa el texto de búsqueda."
-        is HttpException -> when (code()) {
-            404 -> "No se encontraron medicamentos con ese nombre."
-            429 -> "CIMA recibió demasiadas consultas. Espera un momento."
-            in 500..599 -> "El servicio de CIMA no está disponible. Intenta más tarde."
-            else -> "No se pudo consultar CIMA. Código ${code()}."
-        }
-
-        is SocketTimeoutException ->
-            "La consulta tardó demasiado. Revisa tu conexión e intenta de nuevo."
-
-        is JsonParseException ->
-            "La respuesta de CIMA no se pudo interpretar. Intenta de nuevo."
-
-        is IOException ->
-            "Sin conexión. Revisa tu red e intenta de nuevo."
-
-        else -> "No se pudo consultar la información del medicamento."
     }
 }

@@ -10,8 +10,10 @@ import com.meds.app.domain.model.MedicationDraft
 import com.meds.app.domain.model.Nudge
 import com.meds.app.domain.model.PlantState
 import com.meds.app.domain.model.Schedule
-import com.meds.app.data.repository.CompanionRepository
-import com.meds.app.data.repository.PatientRepository
+import com.meds.app.data.repository.CompanionRepositoryImpl
+import com.meds.app.data.repository.PatientRepositoryImpl
+import com.meds.app.domain.repository.CompanionRepository
+import com.meds.app.domain.repository.PatientRepository
 import com.meds.app.core.common.todayKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
@@ -48,8 +50,8 @@ private data class PatientExtras(
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class PatientViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = PatientRepository(application)
-    private val companionRepository = CompanionRepository()
+    private val repository: PatientRepository = PatientRepositoryImpl(application)
+    private val companionRepository: CompanionRepository = CompanionRepositoryImpl()
     private val uid = FirebaseAuth.getInstance().currentUser?.uid
     private val extras = MutableStateFlow(PatientExtras())
     private var ensuring = false

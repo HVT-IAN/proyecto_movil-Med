@@ -7,7 +7,8 @@ import com.google.firebase.auth.FirebaseAuth
 import com.meds.app.domain.model.CompanionLink
 import com.meds.app.domain.model.Nudge
 import com.meds.app.domain.model.PairingInvite
-import com.meds.app.data.repository.CompanionRepository
+import com.meds.app.data.repository.CompanionRepositoryImpl
+import com.meds.app.domain.repository.CompanionRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -26,7 +27,7 @@ private data class PatientCompanionExtras(
 )
 
 class PatientCompanionViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = CompanionRepository()
+    private val repository: CompanionRepository = CompanionRepositoryImpl()
     private val patientUid = FirebaseAuth.getInstance().currentUser?.uid
     private val extras = MutableStateFlow(PatientCompanionExtras())
     private val invite = MutableStateFlow<PairingInvite?>(null)
