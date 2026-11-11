@@ -751,11 +751,11 @@ Lifecycle.Event.ON_START -> {
         ["Evidencias", "38 capturas en evidencias/."],
         ["Versión", "versionName 26.1.1, versionCode 4."],
         ["Release", "APK y AAB firmados en dist/."],
-        ["GitHub Release", "v1.1 publicado con APK y AAB adjuntos; pendiente de publicar v26.1.1."],
+        ["GitHub Release", "v26.1.1 publicado con APK y AAB adjuntos."],
         ["Firma", "Keystore local no versionado; contraseña en keystore.properties, ignorado por Git."],
     ], [120, CONTENT_WIDTH - 120]))
     story.append(H2("9.2 Release firmado"))
-    story.append(P("El release se compila con assembleRelease y bundleRelease. El APK firmado queda en dist/MEDs-release-26.1.1.apk y el AAB en dist/MEDs-release-26.1.1.aab. La firma se verificó con apksigner; el certificado es CN=MEDs, OU=Proyecto integrador, O=MEDs, L=Madrid, ST=Madrid, C=ES. El Release v1.1 sigue publicado en GitHub con los artefactos anteriores; la versión 26.1.1 se publicará como un release nuevo."))
+    story.append(P("El release se compila con assembleRelease y bundleRelease. El APK firmado queda en dist/MEDs-release-26.1.1.apk y el AAB en dist/MEDs-release-26.1.1.aab. La firma se verificó con apksigner; el certificado es CN=MEDs, OU=Proyecto integrador, O=MEDs, L=Madrid, ST=Madrid, C=ES. El Release v26.1.1 está publicado en GitHub con el APK y el AAB adjuntos."))
     story.append(P("El keystore y keystore.properties no se suben al repositorio. Hay que respaldarlos: sin ellos no se pueden publicar actualizaciones con la misma identidad. El APK de depuración también queda en dist/MEDs-debug-production.apk para pruebas internas."))
     story.append(H2("9.3 Checklist antes de entregar"))
     story += BULLETS([

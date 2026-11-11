@@ -84,7 +84,7 @@ Artefactos generados:
 - `app\build\outputs\apk\release\app-release.apk`
 - `app\build\outputs\bundle\release\app-release.aab`
 - Copias listas para entregar: `dist\MEDs-release-26.1.1.apk` y `dist\MEDs-release-26.1.1.aab`
-- Release publicado: `https://github.com/HVT-IAN/proyecto_movil-Med/releases/tag/v1.1` (pendiente de publicar como `v26.1.1`)
+- Release publicado: `https://github.com/HVT-IAN/proyecto_movil-Med/releases/tag/v26.1.1`
 
 La firma usa `keystore\meds-release.jks` y `keystore.properties`. Ambos están ignorados por Git y no deben subirse. Hay que respaldarlos porque son necesarios para futuras actualizaciones.
 
