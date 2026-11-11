@@ -21,7 +21,7 @@ Aplicación Android nativa para recordar medicamentos, pensada para personas con
 - Firebase Cloud Messaging para notificaciones push.
 - Cloud Functions (Node 22) para enviar los push desde Firestore.
 - Retrofit + Gson contra la API REST de CIMA/AEMPS para consultar medicamentos.
-- DataStore para preferencias locales.
+- DataStore para preferencias locales y para la caché offline de medicamentos con su cola de sincronización.
 - AlarmManager y notificaciones locales.
 - ZXing para generar y escanear el QR.
 - Autenticación biométrica opcional con androidx.biometric y respaldo con el PIN del teléfono.
@@ -73,7 +73,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 ## Release firmado
 
-La versión 1.1 usa `versionCode 2` y `versionName "1.1"`.
+La versión 1.1 usa `versionCode 3` y `versionName "1.1"`.
 
 ```powershell
 .\gradlew.bat :app:assembleRelease :app:bundleRelease
@@ -136,6 +136,15 @@ La variante de emulador no registra tokens FCM ni permite probar push; para eso 
 - Desde Ajustes > Cuenta se puede vincular un correo al usuario anónimo actual. La vinculación conserva el mismo `uid`, por lo que medicamentos, tomas e historial se mantienen.
 - Al iniciar sesión en otro dispositivo, el rol y el nombre se recuperan desde Firestore.
 - Cerrar sesión borra las preferencias locales. Si la cuenta es anónima y no se vinculó un correo, no se puede volver a acceder a esos datos.
+
+## Medicamentos sin conexión
+
+- La app guarda en DataStore una instantánea de los medicamentos y horarios del paciente, además de una cola de altas, ediciones y borrados pendientes.
+- Al guardar sin red, el cambio queda visible de inmediato y se marca con el aviso `cambios pendientes de sincronizar`; no se pierde al cerrar o reiniciar la app.
+- Los identificadores se generan con UUID en el cliente, de modo que el mismo medicamento conserva su ID en local y en Firestore.
+- Al recuperar la conexión, la cola se reintenta al abrir la app y cada 20 segundos. Cuando Firestore confirma el cambio, el aviso desaparece y el medicamento pasa a la instantánea local.
+- La caché se aísla por `uid` y se borra al cerrar sesión, igual que las preferencias.
+- Si se desinstala la app o se borran sus datos antes de sincronizar, los cambios que aún estaban pendientes se pierden.
 
 ## Bloqueo con huella, rostro o PIN
 
@@ -207,7 +216,7 @@ app/src/main/java/com/meds/app
   data/remote/api     Cliente Retrofit de CIMA
   data/remote/dto     DTOs de la API de CIMA
   data/repository     Implementaciones *RepositoryImpl y mapeos
-  data/local          Preferencias con DataStore
+  data/local          DataStore: preferencias, caché offline y cola de sincronización
 
   presentation/auth      Inicio de sesión, registro y advertencia anónima
   presentation/onboarding Introducción y nombre
@@ -240,7 +249,7 @@ functions/             Cloud Functions que envían los push
 - `data/local`, Firebase Auth/Firestore e `integration/notifications`: fuentes de datos remotas, locales y del dispositivo.
 - `core/ui/theme`, `core/ui/components` y `core/common`: elementos transversales de interfaz y utilidades.
 
-Las APIs externas son Firebase (Authentication, Cloud Firestore, Cloud Messaging y Cloud Functions) y la API REST de CIMA/AEMPS mediante Retrofit. El almacenamiento local usa DataStore para preferencias, la caché offline de Firestore para los datos de dominio y SharedPreferences para el widget.
+Las APIs externas son Firebase (Authentication, Cloud Firestore, Cloud Messaging y Cloud Functions) y la API REST de CIMA/AEMPS mediante Retrofit. El almacenamiento local usa DataStore para preferencias y para la caché offline de medicamentos con su cola de cambios pendientes, la caché offline de Firestore para el resto de los datos de dominio y SharedPreferences para el widget.
 
 ## Datos en Firestore
 

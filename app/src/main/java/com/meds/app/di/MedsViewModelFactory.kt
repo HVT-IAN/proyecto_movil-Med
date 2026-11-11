@@ -26,7 +26,8 @@ val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         AppViewModel(
             authRepository = container.authRepository,
             userRepository = container.userRepository,
-            preferences = container.preferencesStore
+            preferences = container.preferencesStore,
+            offlineStore = container.offlineMedicationStore
         )
     }
     initializer {

@@ -11,6 +11,7 @@ import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.messaging.FirebaseMessaging
+import com.meds.app.data.local.OfflineMedicationStore
 import com.meds.app.data.local.PreferencesStore
 import com.meds.app.domain.model.UserRole
 import com.meds.app.domain.repository.AuthRepository
@@ -37,7 +38,8 @@ private data class LocalPreferences(
 class AppViewModel(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val preferences: PreferencesStore
+    private val preferences: PreferencesStore,
+    private val offlineStore: OfflineMedicationStore
 ) : ViewModel() {
     private val _state = MutableStateFlow(AppUiState())
     val state: StateFlow<AppUiState> = _state.asStateFlow()
@@ -224,6 +226,7 @@ class AppViewModel(
             }
             authRepository.signOut()
             preferences.clearAll()
+            offlineStore.clearAll()
             _state.update { AppUiState(loading = false) }
         }
     }

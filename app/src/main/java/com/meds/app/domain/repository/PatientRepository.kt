@@ -30,4 +30,10 @@ interface PatientRepository {
     suspend fun snoozeDose(dose: DoseLog, minutes: Long = 10L): Result<Unit>
 
     suspend fun deleteMedication(medicationId: String, scheduleId: String?): Result<Unit>
+
+    /** Número de cambios locales pendientes de confirmar en Firestore. */
+    fun observePendingChanges(): Flow<Int>
+
+    /** Intenta enviar a Firestore los cambios guardados sin conexión. */
+    suspend fun syncPendingChanges()
 }

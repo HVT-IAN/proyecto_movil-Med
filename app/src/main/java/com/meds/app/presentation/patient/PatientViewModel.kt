@@ -74,6 +74,15 @@ class PatientViewModel(
 
     init {
         viewModelScope.launch {
+            repository.syncPendingChanges()
+        }
+        viewModelScope.launch {
+            while (true) {
+                delay(20_000L)
+                repository.syncPendingChanges()
+            }
+        }
+        viewModelScope.launch {
             while (true) {
                 delay(30_000L)
                 val newDate = todayKey()
@@ -126,11 +135,16 @@ class PatientViewModel(
         emit(PatientUiState(loading = false))
     }
 
-    val state: StateFlow<PatientUiState> = combine(coreFlow, extras) { core, extra ->
+    val state: StateFlow<PatientUiState> = combine(
+        coreFlow,
+        extras,
+        repository.observePendingChanges()
+    ) { core, extra, pending ->
         core.copy(
             error = extra.error,
             saving = extra.saving,
-            saveSuccess = extra.saveSuccess
+            saveSuccess = extra.saveSuccess,
+            pendingChanges = pending
         )
     }.stateIn(
         scope = viewModelScope,

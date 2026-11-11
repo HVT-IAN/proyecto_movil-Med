@@ -3,6 +3,7 @@ package com.meds.app.di
 import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.meds.app.data.local.OfflineMedicationStore
 import com.meds.app.data.local.PreferencesStore
 import com.meds.app.data.repository.AuthRepositoryImpl
 import com.meds.app.data.repository.CompanionRepositoryImpl
@@ -30,12 +31,20 @@ class AppContainer(context: Context) {
     private val firestore = FirebaseFirestore.getInstance()
 
     val preferencesStore: PreferencesStore = PreferencesStore(appContext)
+    val offlineMedicationStore: OfflineMedicationStore =
+        OfflineMedicationStore(appContext)
     val alarmScheduler: AlarmScheduler = AlarmScheduler(appContext)
 
     val authRepository: AuthRepository = AuthRepositoryImpl(auth)
     val userRepository: UserRepository = UserRepositoryImpl(firestore)
     val patientRepository: PatientRepository =
-        PatientRepositoryImpl(appContext, firestore, auth, alarmScheduler)
+        PatientRepositoryImpl(
+            appContext,
+            firestore,
+            auth,
+            alarmScheduler,
+            offlineMedicationStore
+        )
     val companionRepository: CompanionRepository =
         CompanionRepositoryImpl(firestore, auth)
     val medicationInfoRepository: MedicationInfoRepository =

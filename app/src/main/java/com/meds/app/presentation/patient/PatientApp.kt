@@ -1,5 +1,7 @@
 package com.meds.app.presentation.patient
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
@@ -108,17 +110,26 @@ fun PatientApp(
             }
         }
     ) { innerPadding ->
-        PatientNavGraph(
-            navController = navController,
-            account = account,
-            state = state,
-            patientViewModel = patientViewModel,
-            companionViewModel = companionViewModel,
-            onLinkEmail = onLinkEmail,
-            onSignOut = onSignOut,
-            onClearAuthMessages = onClearAuthMessages,
-            onBiometricChange = onBiometricChange,
-            modifier = Modifier.padding(innerPadding)
-        )
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
+            PendingSyncBanner(
+                pendingChanges = state.pendingChanges
+            )
+            PatientNavGraph(
+                navController = navController,
+                account = account,
+                state = state,
+                patientViewModel = patientViewModel,
+                companionViewModel = companionViewModel,
+                onLinkEmail = onLinkEmail,
+                onSignOut = onSignOut,
+                onClearAuthMessages = onClearAuthMessages,
+                onBiometricChange = onBiometricChange,
+                modifier = Modifier.weight(1f)
+            )
+        }
     }
 }

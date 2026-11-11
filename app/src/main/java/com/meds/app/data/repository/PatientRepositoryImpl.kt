@@ -1,15 +1,22 @@
 package com.meds.app.data.repository
 
 import android.content.Context
+import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.QuerySnapshot
 import com.google.firebase.firestore.SetOptions
 import com.google.firebase.Timestamp
+import com.meds.app.data.local.OfflineMedicationStore
+import com.meds.app.data.local.OfflinePlanState
+import com.meds.app.data.local.PendingMedicationDelete
+import com.meds.app.data.local.toMedicationModel
+import com.meds.app.data.local.toScheduleModel
 import com.meds.app.domain.model.DoseLog
 import com.meds.app.domain.model.DoseStatus
 import com.meds.app.domain.model.Medication
@@ -23,21 +30,30 @@ import com.meds.app.core.common.todayKey
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
+import java.io.IOException
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.temporal.ChronoUnit
 import java.util.Date
+import java.util.UUID
 
 class PatientRepositoryImpl(
     context: Context,
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
-    private val alarmScheduler: AlarmScheduler = AlarmScheduler(context)
+    private val alarmScheduler: AlarmScheduler = AlarmScheduler(context),
+    private val offlineStore: OfflineMedicationStore = OfflineMedicationStore(context)
 ) : PatientRepository {
     private fun uidOrNull(): String? = auth.currentUser?.uid
 
@@ -53,12 +69,26 @@ class PatientRepositoryImpl(
 
     override fun observeMedications(): Flow<List<Medication>> {
         val uid = uidOrNull() ?: return flowOf(emptyList())
-        return queryFlow(medicationsRef(uid)).map { snapshot -> snapshot.toMedications() }
+        val remote = queryFlow(medicationsRef(uid))
+            .map { snapshot -> snapshot.toMedications() }
+            .onEach { medications -> offlineStore.writeSnapshot(uid, medications = medications) }
+            .onStart { emit(offlineStore.read(uid).medications) }
+            .catch { /* Sin red se conserva la última instantánea local. */ }
+        return combine(remote, offlineStore.observe(uid)) { medications, local ->
+            local.mergeMedications(medications)
+        }.distinctUntilChanged()
     }
 
     override fun observeSchedules(): Flow<List<Schedule>> {
         val uid = uidOrNull() ?: return flowOf(emptyList())
-        return queryFlow(schedulesRef(uid)).map { snapshot -> snapshot.toSchedules() }
+        val remote = queryFlow(schedulesRef(uid))
+            .map { snapshot -> snapshot.toSchedules() }
+            .onEach { schedules -> offlineStore.writeSnapshot(uid, schedules = schedules) }
+            .onStart { emit(offlineStore.read(uid).schedules) }
+            .catch { /* Sin red se conserva la última instantánea local. */ }
+        return combine(remote, offlineStore.observe(uid)) { schedules, local ->
+            local.mergeSchedules(schedules)
+        }.distinctUntilChanged()
     }
 
     override fun observeDoses(dateKey: String): Flow<List<DoseLog>> {
@@ -82,65 +112,41 @@ class PatientRepositoryImpl(
 
     override suspend fun saveMedication(draft: MedicationDraft): Result<Unit> = runCatching {
         val uid = uid()
-        val medicationRef = if (draft.id.isNullOrBlank()) {
-            medicationsRef(uid).document()
-        } else {
-            medicationsRef(uid).document(draft.id)
-        }
-        val scheduleRef = if (draft.scheduleId.isNullOrBlank()) {
-            schedulesRef(uid).document()
-        } else {
-            schedulesRef(uid).document(draft.scheduleId)
-        }
-
-        val medicationData = mutableMapOf<String, Any>(
-            "name" to draft.name.trim(),
-            "dose" to draft.dose.trim(),
-            "form" to draft.form,
-            "stock" to draft.stock,
-            "active" to true
-        )
-        if (draft.id.isNullOrBlank()) {
-            medicationData["createdAt"] = FieldValue.serverTimestamp()
-        }
-
-        val scheduleData = mapOf<String, Any>(
-            "medicationId" to medicationRef.id,
-            "times" to draft.times.distinct().sorted(),
-            "daysMask" to 127,
-            "anchor" to draft.anchor,
-            "enabled" to true
+        val isNew = draft.id.isNullOrBlank()
+        val normalized = draft.copy(
+            id = draft.id?.takeIf(String::isNotBlank) ?: UUID.randomUUID().toString(),
+            scheduleId = draft.scheduleId?.takeIf(String::isNotBlank)
+                ?: UUID.randomUUID().toString()
         )
 
-        val batch = firestore.batch()
-        batch.set(medicationRef, medicationData, SetOptions.merge())
-        batch.set(scheduleRef, scheduleData, SetOptions.merge())
-        batch.commit().await()
+        // El cambio queda en disco antes de tocar la red: si la app se cierra
+        // o no hay conexión, el medicamento sigue visible y se sincroniza luego.
+        offlineStore.enqueueSave(uid, normalized, isNew)
+        scheduleAlarms(normalized)
 
-        runCatching {
-            alarmScheduler.scheduleMedication(
-                medicationId = medicationRef.id,
-                medicationName = draft.name.trim(),
-                dose = draft.dose.trim(),
-                scheduleId = scheduleRef.id,
-                times = draft.times.distinct().sorted()
-            )
+        val outcome = runCatching {
+            writeMedicationRemote(uid, normalized, isNew, WRITE_TIMEOUT_MS)
         }
-
-        runCatching {
-            syncTodayLogsForSchedule(
-                uid = uid,
-                scheduleId = scheduleRef.id,
-                times = draft.times.distinct().sorted(),
-                medicationName = draft.name.trim(),
-                dose = draft.dose.trim()
-            )
+        if (outcome.isSuccess) {
+            offlineStore.completeSave(uid, normalized)
+            withTimeoutOrNull(REFRESH_TIMEOUT_MS) {
+                refreshTodayLogs(uid, normalized)
+            }
+        } else {
+            val error = outcome.exceptionOrNull()
+                ?: error("No se pudo guardar el medicamento.")
+            if (!error.isOfflineError()) {
+                offlineStore.discardSave(uid, normalized.id.orEmpty())
+                alarmScheduler.cancelForSchedule(normalized.scheduleId)
+                throw error
+            }
         }
-        runCatching { ensureTodayDosesInternal(uid) }
     }
 
     override suspend fun ensureTodayDoses(): Result<Unit> = runCatching {
-        ensureTodayDosesInternal(uid())
+        withTimeoutOrNull(REFRESH_TIMEOUT_MS) {
+            ensureTodayDosesInternal(uid())
+        } ?: Unit
     }
 
     override suspend fun takeDose(dose: DoseLog, source: String): Result<Unit> = runCatching {
@@ -255,22 +261,184 @@ class PatientRepositoryImpl(
 
     override suspend fun deleteMedication(medicationId: String, scheduleId: String?): Result<Unit> = runCatching {
         val uid = uid()
-        val today = todayKey()
-        val todayLogs = doseLogsRef(uid).whereEqualTo("dateKey", today).get().await()
-        val batch = firestore.batch()
-        batch.delete(medicationsRef(uid).document(medicationId))
-        if (!scheduleId.isNullOrBlank()) {
-            batch.delete(schedulesRef(uid).document(scheduleId))
-        }
-        todayLogs.documents
-            .filter { it.getString("medicationId") == medicationId }
-            .filter { it.getString("status") != DoseStatus.TAKEN }
-            .forEach { document ->
-                alarmScheduler.cancelDoseNotification(document.id)
-                batch.delete(document.reference)
-            }
-        batch.commit().await()
+        offlineStore.enqueueDelete(uid, medicationId, scheduleId)
         alarmScheduler.cancelForSchedule(scheduleId)
+
+        val outcome = runCatching {
+            deleteRemote(uid, PendingMedicationDelete(medicationId, scheduleId))
+        }
+        if (outcome.isSuccess) {
+            offlineStore.completeDelete(uid, medicationId, scheduleId)
+        } else {
+            val error = outcome.exceptionOrNull() ?: error("No se pudo eliminar el medicamento.")
+            if (!error.isOfflineError()) {
+                offlineStore.removePendingDelete(uid, medicationId)
+                throw error
+            }
+        }
+    }
+
+    override fun observePendingChanges(): Flow<Int> {
+        val uid = uidOrNull() ?: return flowOf(0)
+        return offlineStore.observe(uid)
+            .map { state -> state.pendingCount }
+            .distinctUntilChanged()
+    }
+
+    override suspend fun syncPendingChanges() {
+        val uid = uidOrNull() ?: return
+
+        offlineStore.read(uid).pendingSaves.forEach { pending ->
+            val synced = runCatching {
+                writeMedicationRemote(uid, pending.draft, pending.isNew, SYNC_TIMEOUT_MS)
+            }.isSuccess
+            if (synced) {
+                offlineStore.completeSave(uid, pending.draft)
+                scheduleAlarms(pending.draft)
+                withTimeoutOrNull(REFRESH_TIMEOUT_MS) {
+                    refreshTodayLogs(uid, pending.draft)
+                }
+            }
+        }
+
+        offlineStore.read(uid).pendingDeletes.forEach { pending ->
+            val deleted = runCatching { deleteRemote(uid, pending) }.isSuccess
+            if (deleted) {
+                alarmScheduler.cancelForSchedule(pending.scheduleId)
+                offlineStore.completeDelete(uid, pending.medicationId, pending.scheduleId)
+            }
+        }
+    }
+
+    private suspend fun writeMedicationRemote(
+        uid: String,
+        draft: MedicationDraft,
+        isNew: Boolean,
+        timeoutMs: Long
+    ) {
+        val medicationId = draft.id?.takeIf(String::isNotBlank)
+            ?: error("El medicamento no tiene identificador.")
+        val scheduleId = draft.scheduleId?.takeIf(String::isNotBlank)
+            ?: error("El horario no tiene identificador.")
+        val medicationRef = medicationsRef(uid).document(medicationId)
+        val scheduleRef = schedulesRef(uid).document(scheduleId)
+
+        val medicationData = mutableMapOf<String, Any>(
+            "name" to draft.name.trim(),
+            "dose" to draft.dose.trim(),
+            "form" to draft.form,
+            "stock" to draft.stock,
+            "active" to true
+        )
+        if (isNew) {
+            medicationData["createdAt"] = FieldValue.serverTimestamp()
+        }
+
+        val scheduleData = mapOf<String, Any>(
+            "medicationId" to medicationRef.id,
+            "times" to draft.times.distinct().sorted(),
+            "daysMask" to 127,
+            "anchor" to draft.anchor,
+            "enabled" to true
+        )
+
+        val completed = withTimeoutOrNull(timeoutMs) {
+            val batch = firestore.batch()
+            batch.set(medicationRef, medicationData, SetOptions.merge())
+            batch.set(scheduleRef, scheduleData, SetOptions.merge())
+            batch.commit().await()
+            true
+        } ?: false
+
+        if (!completed) throw OfflineWritePending()
+    }
+
+    private suspend fun deleteRemote(uid: String, pending: PendingMedicationDelete) {
+        val completed = withTimeoutOrNull(DELETE_TIMEOUT_MS) {
+            val todayLogs = doseLogsRef(uid)
+                .whereEqualTo("dateKey", todayKey())
+                .get()
+                .await()
+
+            val batch = firestore.batch()
+            batch.delete(medicationsRef(uid).document(pending.medicationId))
+            if (!pending.scheduleId.isNullOrBlank()) {
+                batch.delete(schedulesRef(uid).document(pending.scheduleId))
+            }
+            todayLogs.documents
+                .filter { it.getString("medicationId") == pending.medicationId }
+                .filter { it.getString("status") != DoseStatus.TAKEN }
+                .forEach { document ->
+                    alarmScheduler.cancelDoseNotification(document.id)
+                    batch.delete(document.reference)
+                }
+            batch.commit().await()
+            true
+        } ?: false
+
+        if (!completed) throw OfflineWritePending()
+    }
+
+    private fun scheduleAlarms(draft: MedicationDraft) {
+        runCatching {
+            alarmScheduler.scheduleMedication(
+                medicationId = draft.id.orEmpty(),
+                medicationName = draft.name.trim(),
+                dose = draft.dose.trim(),
+                scheduleId = draft.scheduleId.orEmpty(),
+                times = draft.times.distinct().sorted()
+            )
+        }
+    }
+
+    private suspend fun refreshTodayLogs(uid: String, draft: MedicationDraft) {
+        ignoreFailure {
+            syncTodayLogsForSchedule(
+                uid = uid,
+                scheduleId = draft.scheduleId.orEmpty(),
+                times = draft.times.distinct().sorted(),
+                medicationName = draft.name.trim(),
+                dose = draft.dose.trim()
+            )
+        }
+        ignoreFailure { ensureTodayDosesInternal(uid) }
+    }
+
+    private suspend fun ignoreFailure(block: suspend () -> Unit) {
+        try {
+            block()
+        } catch (cancellation: kotlinx.coroutines.CancellationException) {
+            throw cancellation
+        } catch (_: Exception) {
+            // El cambio ya está guardado en local; refrescar las tomas es secundario.
+        }
+    }
+
+    private fun OfflinePlanState.mergeMedications(remote: List<Medication>): List<Medication> {
+        val deleted = deletedMedicationIds()
+        val pending = pendingMedicationIds()
+        return (remote.filter { it.id !in deleted && it.id !in pending } + pendingMedications())
+            .distinctBy { it.id }
+    }
+
+    private fun OfflinePlanState.mergeSchedules(remote: List<Schedule>): List<Schedule> {
+        val deleted = deletedMedicationIds()
+        val pending = pendingMedicationIds()
+        return (remote.filter {
+            it.medicationId !in deleted && it.medicationId !in pending
+        } + pendingSchedules()).distinctBy { it.id }
+    }
+
+    private fun Throwable.isOfflineError(): Boolean = when (this) {
+        is OfflineWritePending,
+        is FirebaseNetworkException,
+        is IOException -> true
+
+        is FirebaseFirestoreException ->
+            code == FirebaseFirestoreException.Code.UNAVAILABLE ||
+                code == FirebaseFirestoreException.Code.DEADLINE_EXCEEDED
+
+        else -> false
     }
 
     private suspend fun syncTodayLogsForSchedule(
@@ -386,4 +554,14 @@ class PatientRepositoryImpl(
         }
         awaitClose { registration.remove() }
     }
+
+    private companion object {
+        const val WRITE_TIMEOUT_MS = 6_000L
+        const val SYNC_TIMEOUT_MS = 8_000L
+        const val DELETE_TIMEOUT_MS = 6_000L
+        const val REFRESH_TIMEOUT_MS = 8_000L
+    }
 }
+
+/** Señal interna: el guardado quedó encolado en local y se reintentará después. */
+private class OfflineWritePending : IOException("Sin conexión: el cambio queda pendiente.")

@@ -17,5 +17,6 @@ data class PatientUiState(
     val nudges: List<Nudge> = emptyList(),
     val error: String? = null,
     val saving: Boolean = false,
-    val saveSuccess: Boolean = false
+    val saveSuccess: Boolean = false,
+    val pendingChanges: Int = 0
 )

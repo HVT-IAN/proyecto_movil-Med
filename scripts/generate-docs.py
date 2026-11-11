@@ -359,9 +359,9 @@ def build():
         ["Backend", "Firebase Authentication + Cloud Firestore (caché offline)"],
         ["API REST", "CIMA/AEMPS con Retrofit 2.11, Gson y OkHttp"],
         ["Push", "Firebase Cloud Messaging + Cloud Functions (Node 22)"],
-        ["Persistencia local", "DataStore Preferences, SharedPreferences del widget y AlarmManager"],
+        ["Persistencia local", "DataStore Preferences y DataStore de caché offline, SharedPreferences del widget y AlarmManager"],
         ["Integraciones", "QR con ZXing, biometría con androidx.biometric y widget AppWidgetProvider"],
-        ["Versión", "1.1 - versionCode 2"],
+        ["Versión", "1.1 - versionCode 3"],
         ["Entrega", "APK y AAB firmados en dist/"],
     ], [120, CONTENT_WIDTH - 120]))
     story.append(H2("1.3 Cambios de la versión 1.1"))
@@ -372,6 +372,7 @@ def build():
         "Regeneración de QR que invalida el código anterior, con aviso y rechazo del código usado.",
         "Push de recordatorios y de vinculación con canales de alta importancia, sonido y vibración.",
         "Release 1.1 firmado, PDF actualizado y evidencias 32 a 38.",
+        "Persistencia offline en DataStore: los medicamentos se guardan sin conexión, sobreviven al cierre de la app y se sincronizan con Firestore al recuperar la red.",
     ])
     story.append(PageBreak())
 
@@ -444,8 +445,8 @@ def build():
         ["data/remote/api", "CimaApi, CimaClient y configuración de Retrofit."],
         ["data/remote/dto", "DTOs de la API de CIMA."],
         ["data/repository", "Implementaciones *RepositoryImpl con Firestore, Firebase Auth, Retrofit y mapeos."],
-        ["data/local", "PreferencesStore con DataStore: rol, nombre y onboarding."],
-        ["di", "AppContainer con repositorios, PreferencesStore y AlarmScheduler; MedsViewModelFactory."],
+        ["data/local", "PreferencesStore y OfflineMedicationStore con DataStore: preferencias, caché de medicamentos y cola de cambios pendientes."],
+        ["di", "AppContainer con repositorios, PreferencesStore, OfflineMedicationStore y AlarmScheduler; MedsViewModelFactory."],
         ["integration/notifications", "Alarmas, canales, receptores y MedsMessagingService."],
         ["presentation/patient", "Hoy, medicamentos, consulta CIMA, jardín, historial y acompañante."],
         ["presentation/companion", "Panel y vinculación del acompañante."],
@@ -604,15 +605,48 @@ val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
     story.append(T([
         ["Dato", "Mecanismo", "Supervivencia", "Dónde"],
         ["Rol, nombre y onboarding", "DataStore Preferences", "Reinicio de la app", "PreferencesStore"],
-        ["Medicamentos, horarios, tomas, planta y vínculos", "Cloud Firestore + caché offline", "Reinicio y reconexión", "Repositories"],
+        ["Medicamentos y horarios", "DataStore OfflineMedicationStore + Firestore", "Reinicio y reconexión", "PatientRepositoryImpl"],
+        ["Tomas, planta y vínculos", "Cloud Firestore + caché offline", "Reinicio y reconexión", "Repositories"],
         ["Próxima toma del widget", "SharedPreferences", "Reinicio y cambios de toma", "NextDoseWidgetProvider"],
         ["Alarmas locales", "AlarmManager + SharedPreferences", "Reinicio del dispositivo", "AlarmScheduler / BootReceiver"],
         ["Token FCM", "Firestore users/{uid}/devices", "Hasta cerrar sesión o invalidarse", "UserRepository"],
         ["Resultados CIMA", "Memoria del ViewModel", "Mientras vive la pantalla", "MedicationInfoViewModel"],
     ], [125, 155, 120, CONTENT_WIDTH - 400]))
-    story.append(H2("6.1 Por qué DataStore y no Room"))
-    story.append(P("DataStore se usa para preferencias pequeñas y reactivas. Firestore es la fuente de verdad de los datos de dominio y su caché offline cubre la lectura sin red. No se usa Room porque duplicaría la fuente de verdad y añadiría sincronización. La consulta CIMA no se persiste: es información de referencia y se consulta de nuevo cuando el usuario la necesita."))
-    story.append(H2("6.2 Biometría y sesión"))
+    story.append(H2("6.1 DataStore como caché y cola de salida"))
+    story.append(P("La app usa dos almacenes DataStore independientes. meds_prefs conserva rol, nombre, onboarding y preferencias de biometría. meds_offline_cache conserva la última instantánea de medicamentos y horarios confirmada por Firestore, junto con una cola de altas, ediciones y borrados pendientes. La instantánea y la cola se serializan como JSON y se aíslan por owner_uid: al cambiar de usuario se limpian automáticamente."))
+    story.append(T([
+        ["Paso", "Qué ocurre", "Resultado sin red"],
+        ["1. Guardar", "Se normaliza el borrador con UUID de cliente y se encola en DataStore antes de tocar la red.", "El medicamento aparece de inmediato en la lista."],
+        ["2. Escribir", "PatientRepositoryImpl intenta el batch de Firestore con un límite de 6 segundos.", "La escritura queda pendiente y se muestra el aviso de cambios sin sincronizar."],
+        ["3. Confirmar", "Si Firestore responde, el cambio sale de la cola y pasa a la instantánea local; las alarmas y las tomas del día se refrescan.", "Nada se descarta: la cola se reintenta al abrir la app y cada 20 segundos."],
+        ["4. Fusionar", "Al leer, se combinan los datos remotos con la instantánea y la cola; los borrados pendientes filtran el medicamento remoto.", "La interfaz nunca pierde un cambio local aunque Firestore aún no lo tenga."],
+    ], [70, 320, CONTENT_WIDTH - 390]))
+    story.append(CODE("""
+suspend fun saveMedication(draft: MedicationDraft): Result<Unit> = runCatching {
+    val normalized = draft.copy(
+        id = draft.id?.takeIf(String::isNotBlank) ?: UUID.randomUUID().toString(),
+        scheduleId = draft.scheduleId?.takeIf(String::isNotBlank)
+            ?: UUID.randomUUID().toString()
+    )
+    offlineStore.enqueueSave(uid(), normalized, isNew)
+    scheduleAlarms(normalized)
+
+    val outcome = runCatching {
+        writeMedicationRemote(uid(), normalized, isNew, WRITE_TIMEOUT_MS)
+    }
+    if (outcome.isSuccess) {
+        offlineStore.completeSave(uid(), normalized)
+        refreshTodayLogs(uid(), normalized)
+    } else if (!outcome.exceptionOrNull()!!.isOfflineError()) {
+        offlineStore.discardSave(uid(), normalized.id.orEmpty())
+        throw outcome.exceptionOrNull()!!
+    }
+}
+"""))
+    story.append(P("La distinción entre error de red y error definitivo es importante: un timeout, IOException o UNAVAILABLE mantiene el cambio en la cola; un rechazo de permisos o de validación lo descarta para no bloquear la sincronización. Cada alta, edición o borrado usa el mismo identificador en local y en Firestore gracias al UUID generado en el cliente."))
+    story.append(H2("6.2 Por qué DataStore y no Room"))
+    story.append(P("El conjunto local es pequeño: medicamentos y horarios de un paciente, más una cola corta de cambios. DataStore cubre ese caso con lectura reactiva, escritura atómica y sin esquema ni migraciones. Room añadiría entidades, DAO, base de datos y migraciones para duplicar una fuente de verdad que sigue siendo Firestore; la caché local es solo una copia de lectura y una cola de salida, no una segunda base de datos. La consulta CIMA tampoco se persiste: es información de referencia y se consulta de nuevo cuando el usuario la necesita. Si en el futuro se requieren búsquedas locales sobre miles de registros, Room sería la opción natural."))
+    story.append(H2("6.3 Biometría y sesión"))
     story.append(P("El estado de desbloqueo vive en la composición de BiometricGate. Se conserva durante la actividad, se pierde al reiniciar el proceso y se vuelve a pedir tras 5 minutos en segundo plano. No se guarda ningún dato biométrico en la app: el sensor y el sistema operativo gestionan la autenticación."))
     story.append(PageBreak())
 
@@ -786,7 +820,7 @@ Lifecycle.Event.ON_START -> {
         ["1. Arquitectura MVVM y organización", "20", "Secciones 3 y 10.3: capas, StateFlow, repositorios, DI manual y recorridos.", "Cubierto"],
         ["2. Consumo de API y tratamiento de datos", "15", "Sección 4: Firebase + Retrofit contra CIMA, DTOs, mapeo, errores y seguridad.", "Cubierto"],
         ["3. Interfaz Compose y navegación", "15", "Sección 5: NavHost, ruta medication_info, estados, tema y componentes.", "Cubierto"],
-        ["4. Gestión de datos y persistencia", "10", "Sección 6: DataStore, caché de Firestore, SharedPreferences y alarmas.", "Cubierto"],
+        ["4. Gestión de datos y persistencia", "10", "Sección 6: DataStore de preferencias y caché offline, cola de sincronización, Firestore, SharedPreferences y alarmas.", "Cubierto"],
         ["5. Integraciones del dispositivo", "15", "Sección 7: QR, biometría y widget; alarmas y push como extras.", "Cubierto"],
         ["6. Estabilidad, validaciones y UX", "10", "Sección 8: validaciones, errores, estados, pruebas y correcciones.", "Cubierto"],
         ["7. Repositorio, documentación y versión", "5", "Sección 9: repo, ramas, release firmado, PDF y 38 evidencias.", "Cubierto"],
@@ -797,6 +831,7 @@ Lifecycle.Event.ON_START -> {
     story.append(T([
         ["Riesgo", "Nivel", "Acción"],
         ["CIMA no disponible o sin red", "Medio", "La app muestra error y reintento; la consulta no bloquea el resto de la app."],
+        ["Guardado sin red antes de sincronizar", "Bajo", "La cola local conserva el cambio y lo reintenta; si se borran los datos de la app antes de sincronizar, ese cambio se pierde."],
         ["Push sin desplegar", "Medio", "Habilitar Blaze, firebase login y desplegar Functions/reglas antes de demostrar el push cerrado."],
         ["Prueba física pendiente", "Medio", "Instalar el release 1.1 en el dispositivo y repetir login, biometría, QR, widget y CIMA."],
         ["Keystore no respaldado", "Bajo", "Guardar keystore y keystore.properties en un lugar seguro, fuera de Git."],
