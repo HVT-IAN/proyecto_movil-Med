@@ -11,6 +11,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.meds.app.di.MedsViewModelFactory
 import com.meds.app.presentation.auth.AnonymousWarningScreen
 import com.meds.app.presentation.auth.AuthMode
 import com.meds.app.presentation.auth.AuthScreen
@@ -30,7 +31,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun AppNavGraph(
-    viewModel: AppViewModel = viewModel(),
+    viewModel: AppViewModel = viewModel(factory = MedsViewModelFactory),
     onExit: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()

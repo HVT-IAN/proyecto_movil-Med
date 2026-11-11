@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.meds.app.domain.model.MedicationInfo
 import com.meds.app.domain.model.MedicationInfoDetail
-import com.meds.app.data.repository.MedicationInfoRepositoryImpl
 import com.meds.app.domain.repository.MedicationInfoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,7 +12,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 class MedicationInfoViewModel(
-    private val repository: MedicationInfoRepository = MedicationInfoRepositoryImpl()
+    private val repository: MedicationInfoRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(MedicationInfoUiState())
     val state: StateFlow<MedicationInfoUiState> = _state.asStateFlow()

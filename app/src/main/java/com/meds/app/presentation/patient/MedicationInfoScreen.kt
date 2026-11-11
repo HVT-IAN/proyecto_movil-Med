@@ -48,6 +48,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.meds.app.di.MedsViewModelFactory
 import com.meds.app.domain.model.MedicationInfo
 import com.meds.app.domain.model.MedicationInfoDetail
 import com.meds.app.core.ui.components.EmptyState
@@ -61,7 +62,7 @@ fun MedicationInfoScreen(
     initialQuery: String,
     onBack: () -> Unit,
     onUseName: (String) -> Unit,
-    viewModel: MedicationInfoViewModel = viewModel()
+    viewModel: MedicationInfoViewModel = viewModel(factory = MedsViewModelFactory)
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val focusManager = LocalFocusManager.current

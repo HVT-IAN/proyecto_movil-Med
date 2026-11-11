@@ -17,7 +17,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.firebase.messaging.FirebaseMessaging
 import com.meds.app.BuildConfig
-import com.meds.app.data.repository.UserRepositoryImpl
+import com.meds.app.MedsApp
+import com.meds.app.di.MedsViewModelFactory
 import com.meds.app.integration.widget.NextDoseWidgetProvider
 import com.meds.app.navigation.PatientNavGraph
 import com.meds.app.navigation.Routes
@@ -40,16 +41,22 @@ fun PatientApp(
     onClearAuthMessages: () -> Unit,
     onBiometricChange: (Boolean) -> Unit
 ) {
-    val patientViewModel: PatientViewModel = viewModel(key = "patient_${account.userId}")
+    val patientViewModel: PatientViewModel =
+        viewModel(key = "patient_${account.userId}", factory = MedsViewModelFactory)
     val companionViewModel: PatientCompanionViewModel =
-        viewModel(key = "patient_companions_${account.userId}")
+        viewModel(
+            key = "patient_companions_${account.userId}",
+            factory = MedsViewModelFactory
+        )
     val state by patientViewModel.state.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val userRepository = remember { UserRepositoryImpl() }
+    val userRepository = remember(context) {
+        (context.applicationContext as MedsApp).container.userRepository
+    }
 
     LaunchedEffect(account.userId) {
         if (BuildConfig.USE_FIREBASE_EMULATOR) return@LaunchedEffect

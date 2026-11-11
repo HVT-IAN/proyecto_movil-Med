@@ -28,9 +28,9 @@ import java.util.Date
 import java.util.Locale
 
 class CompanionRepositoryImpl(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 ) : CompanionRepository {
-    private val auth = FirebaseAuth.getInstance()
     private val random = SecureRandom()
 
     private fun uidOrNull(): String? = auth.currentUser?.uid

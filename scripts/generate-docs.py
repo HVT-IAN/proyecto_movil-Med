@@ -429,8 +429,9 @@ def build():
     story.append(T([
         ["Capa", "Responsabilidad", "Ejemplos"],
         ["Interfaz (Compose)", "Dibuja el estado y emite eventos; no accede a datos.", "presentation/, core/ui/components, navigation/AppNavGraph"],
-        ["Estado (ViewModel)", "Expone StateFlow, lanza corrutinas y traduce errores.", "AppViewModel, PatientViewModel, MedicationInfoViewModel"],
+        ["Estado (ViewModel)", "Expone StateFlow, lanza corrutinas y recibe sus dependencias por constructor.", "AppViewModel, PatientViewModel, MedicationInfoViewModel"],
         ["Estado visible (UiState)", "Contrato de datos de cada módulo: carga, contenido y error.", "AppUiState, PatientUiState, CompanionUiState, AccountUiState"],
+        ["Composición (DI)", "Crea una sola vez repositorios y servicios; entrega dependencias a los ViewModels.", "AppContainer, MedsViewModelFactory"],
         ["Datos (Repository)", "Contratos en domain/repository e implementaciones en data/repository; batches, mapeo, reglas y Result.", "AuthRepository, PatientRepository, CompanionRepository, MedicationInfoRepository"],
         ["Fuentes", "Identidad, base de datos, API REST, preferencias y alarmas.", "FirebaseAuth, FirebaseFirestore, Retrofit, DataStore, AlarmManager"],
     ], [100, 190, CONTENT_WIDTH - 290]))
@@ -444,6 +445,7 @@ def build():
         ["data/remote/dto", "DTOs de la API de CIMA."],
         ["data/repository", "Implementaciones *RepositoryImpl con Firestore, Firebase Auth, Retrofit y mapeos."],
         ["data/local", "PreferencesStore con DataStore: rol, nombre y onboarding."],
+        ["di", "AppContainer con repositorios, PreferencesStore y AlarmScheduler; MedsViewModelFactory."],
         ["integration/notifications", "Alarmas, canales, receptores y MedsMessagingService."],
         ["presentation/patient", "Hoy, medicamentos, consulta CIMA, jardín, historial y acompañante."],
         ["presentation/companion", "Panel y vinculación del acompañante."],
@@ -490,7 +492,39 @@ class MedicationInfoRepositoryImpl(
 }
 """))
     story.append(H2("3.4 Inyección de dependencias"))
-    story.append(P("La inyección es manual y explícita. Los ViewModels declaran sus dependencias con los contratos de domain/repository y, por ahora, construyen la implementación concreta de data/repository con valores por defecto. MedsApp inicializa Firebase y las alarmas. Es una decisión deliberada: la app es pequeña, las dependencias son pocas y visibles, y no se introduce Hilt para no añadir complejidad. Las implementaciones aceptan FirebaseFirestore, FirebaseAuth o CimaApi como parámetro, lo que permite sustituirlos en pruebas."))
+    story.append(P("La inyección es manual y explícita. MedsApp inicializa Firebase, crea un único AppContainer y le pasa el contenedor a la factoría MedsViewModelFactory. Los ViewModels reciben sus dependencias por constructor y ya no construyen repositorios: dependen solo de los contratos de domain/repository. La factoría obtiene el contenedor desde APPLICATION_KEY, que Compose y Navigation incluyen en las CreationExtras, y devuelve la instancia correcta para cada viewModel()."))
+    story.append(CODE("""
+class AppContainer(context: Context) {
+    private val auth = FirebaseAuth.getInstance()
+    private val firestore = FirebaseFirestore.getInstance()
+
+    val preferencesStore = PreferencesStore(context.applicationContext)
+    val alarmScheduler = AlarmScheduler(context.applicationContext)
+    val authRepository: AuthRepository = AuthRepositoryImpl(auth)
+    val userRepository: UserRepository = UserRepositoryImpl(firestore)
+    val patientRepository: PatientRepository =
+        PatientRepositoryImpl(context, firestore, auth, alarmScheduler)
+    val companionRepository: CompanionRepository =
+        CompanionRepositoryImpl(firestore, auth)
+    val medicationInfoRepository: MedicationInfoRepository =
+        MedicationInfoRepositoryImpl()
+}
+"""))
+    story.append(CODE("""
+val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
+    initializer {
+        val container = container()
+        PatientViewModel(
+            repository = container.patientRepository,
+            companionRepository = container.companionRepository,
+            authRepository = container.authRepository
+        )
+    }
+    // ... AppViewModel, PatientCompanionViewModel,
+    // CompanionViewModel y MedicationInfoViewModel
+}
+"""))
+    story.append(P("Es una decisión deliberada: la app es pequeña, las dependencias son pocas y visibles, y no se introduce Hilt para no añadir complejidad. Las implementaciones aceptan FirebaseFirestore, FirebaseAuth, AlarmScheduler o CimaApi como parámetro, lo que permite sustituirlos en pruebas."))
     story.append(PageBreak())
 
     # 4. API
@@ -735,6 +769,7 @@ Lifecycle.Event.ON_START -> {
         ["API CIMA", "CimaApi.kt, CimaModels.kt, MedicationInfoRepository.kt, MedicationInfoRepositoryImpl.kt, MedicationInfoViewModel.kt"],
         ["Consulta CIMA UI", "MedicationInfoScreen.kt, MedicationEditorScreen.kt, PatientApp.kt"],
         ["Estado del paciente", "PatientViewModel.kt"],
+        ["Inyección de dependencias", "di/AppContainer.kt, di/MedsViewModelFactory.kt, MedsApp.kt"],
         ["Firestore", "PatientRepositoryImpl.kt, CompanionRepositoryImpl.kt, FirestoreMappers.kt"],
         ["Biometría", "integration/biometric/BiometricGate.kt, navigation/AppNavGraph.kt"],
         ["Push", "MedsMessagingService.kt, NotificationHelper.kt, functions/index.js"],

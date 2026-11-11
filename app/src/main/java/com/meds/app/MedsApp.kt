@@ -4,10 +4,13 @@ import android.app.Application
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.meds.app.integration.notifications.AlarmScheduler
+import com.meds.app.di.AppContainer
 import com.meds.app.integration.notifications.NotificationHelper
 
 class MedsApp : Application() {
+    lateinit var container: AppContainer
+        private set
+
     override fun onCreate() {
         super.onCreate()
         FirebaseApp.initializeApp(this)
@@ -17,6 +20,7 @@ class MedsApp : Application() {
             FirebaseFirestore.getInstance().useEmulator("127.0.0.1", 8080)
         }
         NotificationHelper.createChannels(this)
-        AlarmScheduler(this).rescheduleAll()
+        container = AppContainer(this)
+        container.alarmScheduler.rescheduleAll()
     }
 }

@@ -1,9 +1,8 @@
 package com.meds.app.integration.notifications
 
-import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import com.meds.app.data.repository.UserRepositoryImpl
+import com.meds.app.MedsApp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -11,11 +10,12 @@ import kotlinx.coroutines.launch
 
 class MedsMessagingService : FirebaseMessagingService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val container get() = (applicationContext as MedsApp).container
 
     override fun onNewToken(token: String) {
-        val uid = FirebaseAuth.getInstance().currentUser?.uid ?: return
+        val uid = container.authRepository.currentUserId ?: return
         scope.launch {
-            runCatching { UserRepositoryImpl().saveDeviceToken(uid, token) }
+            runCatching { container.userRepository.saveDeviceToken(uid, token) }
         }
     }
 

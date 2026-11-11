@@ -35,12 +35,10 @@ import java.util.Date
 
 class PatientRepositoryImpl(
     context: Context,
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
+    private val alarmScheduler: AlarmScheduler = AlarmScheduler(context)
 ) : PatientRepository {
-    private val appContext = context.applicationContext
-    private val auth = FirebaseAuth.getInstance()
-    private val alarmScheduler = AlarmScheduler(appContext)
-
     private fun uidOrNull(): String? = auth.currentUser?.uid
 
     private fun uid(): String = uidOrNull() ?: error("No hay una sesión activa.")

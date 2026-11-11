@@ -1,17 +1,14 @@
 package com.meds.app.presentation.patient
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
 import com.meds.app.domain.model.DoseLog
 import com.meds.app.domain.model.Medication
 import com.meds.app.domain.model.MedicationDraft
 import com.meds.app.domain.model.Nudge
 import com.meds.app.domain.model.PlantState
 import com.meds.app.domain.model.Schedule
-import com.meds.app.data.repository.CompanionRepositoryImpl
-import com.meds.app.data.repository.PatientRepositoryImpl
+import com.meds.app.domain.repository.AuthRepository
 import com.meds.app.domain.repository.CompanionRepository
 import com.meds.app.domain.repository.PatientRepository
 import com.meds.app.core.common.todayKey
@@ -49,10 +46,12 @@ private data class PatientExtras(
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class PatientViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository: PatientRepository = PatientRepositoryImpl(application)
-    private val companionRepository: CompanionRepository = CompanionRepositoryImpl()
-    private val uid = FirebaseAuth.getInstance().currentUser?.uid
+class PatientViewModel(
+    private val repository: PatientRepository,
+    private val companionRepository: CompanionRepository,
+    authRepository: AuthRepository
+) : ViewModel() {
+    private val uid = authRepository.currentUserId
     private val extras = MutableStateFlow(PatientExtras())
     private var ensuring = false
 

@@ -3,8 +3,8 @@ package com.meds.app.integration.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.meds.app.MedsApp
 import com.meds.app.domain.model.DoseLog
-import com.meds.app.data.repository.PatientRepositoryImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -22,7 +22,8 @@ class DoseActionReceiver : BroadcastReceiver() {
         val dateKey = intent.getStringExtra(EXTRA_DATE_KEY).orEmpty()
         val scheduledAt = intent.getLongExtra(EXTRA_SCHEDULED_AT, System.currentTimeMillis())
 
-        AlarmScheduler(context).cancelDoseNotification(logId)
+        val container = (context.applicationContext as MedsApp).container
+        container.alarmScheduler.cancelDoseNotification(logId)
 
         val doseLog = DoseLog(
             id = logId,
@@ -39,13 +40,13 @@ class DoseActionReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 withTimeoutOrNull(8_000L) {
-                    val repository = PatientRepositoryImpl(context)
+                    val repository = container.patientRepository
                     when (action) {
                         ACTION_TAKE -> repository.takeDose(doseLog, source = "NOTIFICATION")
                         ACTION_SNOOZE -> {
                             val result = repository.snoozeDose(doseLog)
                             if (result.isFailure) {
-                                AlarmScheduler(context).scheduleSnooze(
+                                container.alarmScheduler.scheduleSnooze(
                                     doseLog,
                                     System.currentTimeMillis() + 10 * 60_000L
                                 )

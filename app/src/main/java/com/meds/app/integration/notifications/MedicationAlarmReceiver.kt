@@ -3,8 +3,8 @@ package com.meds.app.integration.notifications
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import com.meds.app.MedsApp
 import com.meds.app.domain.model.doseLogId
-import com.meds.app.data.repository.PatientRepositoryImpl
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -25,7 +25,8 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                val repository = PatientRepositoryImpl(context)
+                val container = (context.applicationContext as MedsApp).container
+                val repository = container.patientRepository
                 val alreadyTaken = withTimeoutOrNull(4_000L) {
                     repository.isDoseTaken(logId)
                 } ?: false
@@ -42,7 +43,7 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
                         scheduledAt = scheduledAt
                     )
                 }
-                AlarmScheduler(context).rescheduleAll()
+                container.alarmScheduler.rescheduleAll()
             } finally {
                 pendingResult.finish()
             }

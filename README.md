@@ -217,6 +217,8 @@ app/src/main/java/com/meds/app
   presentation/settings  Cuenta, vinculación de correo y cierre de sesión
   presentation/root      Estado global de sesión y autenticación
 
+  di/                    AppContainer y factoría única de ViewModels
+
   integration/biometric   Bloqueo con huella, rostro o PIN
   integration/notifications Alarmas, canales, receptores y servicio FCM
   integration/widget      Widget de próxima toma
@@ -233,6 +235,8 @@ functions/             Cloud Functions que envían los push
 - `navigation/*NavGraph.kt`: declaración de destinos y transiciones de cada flujo.
 - `domain/repository`: contratos que consume la presentación; no conocen Firebase, Retrofit ni Android.
 - `data/repository`: implementaciones `*RepositoryImpl`. Centralizan el acceso a datos, los batches, las alarmas y las reglas de negocio.
+- `di/AppContainer.kt`: composición manual de dependencias. Crea una sola vez los repositorios, `PreferencesStore` y `AlarmScheduler`.
+- `di/MedsViewModelFactory.kt`: factoría única que recibe el contenedor desde `APPLICATION_KEY` y entrega cada ViewModel con sus dependencias.
 - `data/local`, Firebase Auth/Firestore e `integration/notifications`: fuentes de datos remotas, locales y del dispositivo.
 - `core/ui/theme`, `core/ui/components` y `core/common`: elementos transversales de interfaz y utilidades.
 

@@ -33,6 +33,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.meds.app.core.common.parsePairingCode
+import com.meds.app.di.MedsViewModelFactory
 import com.meds.app.presentation.settings.AccountSettingsScreen
 import com.meds.app.presentation.settings.AccountUiState
 import kotlinx.coroutines.launch
@@ -70,7 +71,8 @@ fun CompanionApp(
         return
     }
 
-    val viewModel: CompanionViewModel = viewModel(key = "companion_${account.userId}")
+    val viewModel: CompanionViewModel =
+        viewModel(key = "companion_${account.userId}", factory = MedsViewModelFactory)
     val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()

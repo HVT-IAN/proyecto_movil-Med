@@ -1,7 +1,6 @@
 package com.meds.app.presentation.root
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.FirebaseNetworkException
 import com.google.firebase.FirebaseTooManyRequestsException
@@ -13,8 +12,6 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseAuthWeakPasswordException
 import com.google.firebase.messaging.FirebaseMessaging
 import com.meds.app.data.local.PreferencesStore
-import com.meds.app.data.repository.AuthRepositoryImpl
-import com.meds.app.data.repository.UserRepositoryImpl
 import com.meds.app.domain.model.UserRole
 import com.meds.app.domain.repository.AuthRepository
 import com.meds.app.domain.repository.UserRepository
@@ -37,10 +34,11 @@ private data class LocalPreferences(
     val biometricAsked: Boolean
 )
 
-class AppViewModel(application: Application) : AndroidViewModel(application) {
-    private val authRepository: AuthRepository = AuthRepositoryImpl()
-    private val userRepository: UserRepository = UserRepositoryImpl()
-    private val preferences = PreferencesStore(application)
+class AppViewModel(
+    private val authRepository: AuthRepository,
+    private val userRepository: UserRepository,
+    private val preferences: PreferencesStore
+) : ViewModel() {
     private val _state = MutableStateFlow(AppUiState())
     val state: StateFlow<AppUiState> = _state.asStateFlow()
     private var profileRestoredForUid: String? = null
