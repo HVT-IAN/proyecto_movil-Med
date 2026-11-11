@@ -15,6 +15,7 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.meds.app.data.local.PreferencesStore
 import com.meds.app.data.repository.AuthRepository
 import com.meds.app.data.repository.UserRepository
+import com.meds.app.domain.model.UserRole
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,26 +26,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
-
-enum class UserRole {
-    PATIENT,
-    COMPANION
-}
-
-data class AppUiState(
-    val loading: Boolean = true,
-    val userId: String? = null,
-    val email: String? = null,
-    val isAnonymous: Boolean = false,
-    val role: UserRole? = null,
-    val name: String = "",
-    val onboarded: Boolean = false,
-    val biometricEnabled: Boolean = false,
-    val biometricAsked: Boolean = false,
-    val authLoading: Boolean = false,
-    val authError: String? = null,
-    val authNotice: String? = null
-)
 
 private data class LocalPreferences(
     val role: String?,

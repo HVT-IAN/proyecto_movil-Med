@@ -19,16 +19,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class PatientCompanionUiState(
-    val loading: Boolean = true,
-    val companions: List<CompanionLink> = emptyList(),
-    val invite: PairingInvite? = null,
-    val nudges: List<Nudge> = emptyList(),
-    val generating: Boolean = false,
-    val error: String? = null,
-    val infoMessage: String? = null
-)
-
 private data class PatientCompanionExtras(
     val generating: Boolean = false,
     val error: String? = null,

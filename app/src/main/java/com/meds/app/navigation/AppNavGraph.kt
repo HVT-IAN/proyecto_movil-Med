@@ -19,7 +19,7 @@ import com.meds.app.presentation.onboarding.OnboardingScreen
 import com.meds.app.presentation.patient.PatientApp
 import com.meds.app.presentation.role.RoleScreen
 import com.meds.app.presentation.root.AppViewModel
-import com.meds.app.presentation.root.UserRole
+import com.meds.app.domain.model.UserRole
 import com.meds.app.presentation.settings.AccountUiState
 import com.meds.app.integration.biometric.BiometricGate
 import com.meds.app.integration.biometric.BiometricOptInDialog

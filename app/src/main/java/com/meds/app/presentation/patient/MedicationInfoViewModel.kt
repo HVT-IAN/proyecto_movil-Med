@@ -12,18 +12,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-data class MedicationInfoUiState(
-    val query: String = "",
-    val loading: Boolean = false,
-    val searched: Boolean = false,
-    val results: List<MedicationInfo> = emptyList(),
-    val total: Int = 0,
-    val error: String? = null,
-    val detailLoading: Boolean = false,
-    val detail: MedicationInfoDetail? = null,
-    val detailError: String? = null
-)
-
 class MedicationInfoViewModel(
     private val repository: MedicationInfoRepository = MedicationInfoRepository()
 ) : ViewModel() {

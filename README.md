@@ -197,7 +197,7 @@ app/src/main/java/com/meds/app
   MainActivity.kt
   MedsApp.kt
 
-  navigation/         AppNavGraph y rutas de Navigation Compose
+  navigation/         AppNavGraph, PatientNavGraph y Routes
   core/common         Fechas, QR y códigos
   core/ui/components  Componentes Compose reutilizables
   core/ui/theme       Tema Sereno clínico
@@ -227,6 +227,9 @@ functions/             Cloud Functions que envían los push
 
 - `presentation/*` y `core/ui/components`: capa View. Composables que dibujan el estado y emiten eventos; no consultan Firebase ni DataStore.
 - `presentation/*/*ViewModel.kt`: capa ViewModel. Exponen `StateFlow`, reciben eventos y lanzan corrutinas en `viewModelScope`.
+- `presentation/*/*UiState.kt`: contrato de estado observable de cada módulo, incluidos carga, contenido y error.
+- `navigation/Routes.kt`: definición central de destinos y argumentos; las pantallas no escriben rutas a mano.
+- `navigation/*NavGraph.kt`: declaración de destinos y transiciones de cada flujo.
 - `data/repository`: capa Repository. Centraliza el acceso a datos, los batches y las reglas de negocio; convierte las respuestas a modelos.
 - `data/local`, Firebase Auth/Firestore e `integration/notifications`: fuentes de datos remotas, locales y del dispositivo.
 - `core/ui/theme`, `core/ui/components` y `core/common`: elementos transversales de interfaz y utilidades.

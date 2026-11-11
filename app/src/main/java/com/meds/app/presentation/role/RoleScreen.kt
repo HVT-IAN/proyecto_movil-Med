@@ -32,7 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import com.meds.app.presentation.root.UserRole
+import com.meds.app.domain.model.UserRole
 import com.meds.app.core.ui.components.MedsWordmark
 import com.meds.app.core.ui.theme.LocalMedsColors
 

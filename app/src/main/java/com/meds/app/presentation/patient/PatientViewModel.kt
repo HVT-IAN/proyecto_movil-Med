@@ -28,19 +28,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-data class PatientUiState(
-    val loading: Boolean = true,
-    val medications: List<Medication> = emptyList(),
-    val schedules: List<Schedule> = emptyList(),
-    val todayDoses: List<DoseLog> = emptyList(),
-    val recentDoses: List<DoseLog> = emptyList(),
-    val plant: PlantState = PlantState(),
-    val nudges: List<Nudge> = emptyList(),
-    val error: String? = null,
-    val saving: Boolean = false,
-    val saveSuccess: Boolean = false
-)
-
 private data class PatientCore(
     val medications: List<Medication>,
     val schedules: List<Schedule>,

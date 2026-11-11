@@ -56,7 +56,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
-import com.meds.app.presentation.root.UserRole
+import com.meds.app.domain.model.UserRole
 import com.meds.app.core.ui.components.InfoRow
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PrimaryActionButton

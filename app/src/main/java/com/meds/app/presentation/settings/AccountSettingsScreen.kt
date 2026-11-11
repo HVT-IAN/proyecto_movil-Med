@@ -61,7 +61,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.meds.app.BuildConfig
-import com.meds.app.presentation.root.UserRole
+import com.meds.app.domain.model.UserRole
 import com.meds.app.core.ui.components.InfoRow
 import com.meds.app.core.ui.components.LabelValue
 import com.meds.app.core.ui.components.MedsCard
@@ -71,20 +71,6 @@ import com.meds.app.integration.biometric.createDeviceCredentialIntent
 import com.meds.app.integration.biometric.findFragmentActivity
 import com.meds.app.integration.biometric.requestBiometricAuthentication
 import com.meds.app.core.ui.theme.LocalMedsColors
-
-data class AccountUiState(
-    val userId: String = "",
-    val name: String = "",
-    val role: UserRole = UserRole.PATIENT,
-    val email: String? = null,
-    val isAnonymous: Boolean = false,
-    val biometricEnabled: Boolean = false,
-    val biometricAvailable: Boolean = true,
-    val deviceCredentialAvailable: Boolean = false,
-    val authLoading: Boolean = false,
-    val authError: String? = null,
-    val authNotice: String? = null
-)
 
 @Composable
 fun AccountSettingsScreen(

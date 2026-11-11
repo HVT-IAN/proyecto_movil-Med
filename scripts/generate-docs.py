@@ -430,13 +430,15 @@ def build():
         ["Capa", "Responsabilidad", "Ejemplos"],
         ["Interfaz (Compose)", "Dibuja el estado y emite eventos; no accede a datos.", "presentation/, core/ui/components, navigation/AppNavGraph"],
         ["Estado (ViewModel)", "Expone StateFlow, lanza corrutinas y traduce errores.", "AppViewModel, PatientViewModel, MedicationInfoViewModel"],
+        ["Estado visible (UiState)", "Contrato de datos de cada módulo: carga, contenido y error.", "AppUiState, PatientUiState, CompanionUiState, AccountUiState"],
         ["Datos (Repository)", "Operaciones, batches, mapeo, reglas y Result.", "AuthRepository, PatientRepository, CompanionRepository, MedicationInfoRepository"],
         ["Fuentes", "Identidad, base de datos, API REST, preferencias y alarmas.", "FirebaseAuth, FirebaseFirestore, Retrofit, DataStore, AlarmManager"],
     ], [100, 190, CONTENT_WIDTH - 290]))
     story.append(H2("3.1 Paquetes principales"))
     story.append(T([
         ["Paquete", "Contenido"],
-        ["domain/model", "Modelos inmutables de Firestore y de consulta CIMA."],
+        ["navigation", "AppNavGraph, PatientNavGraph y Routes con destinos centralizados."],
+        ["domain/model", "Modelos inmutables de Firestore, CIMA y rol de usuario."],
         ["data/remote/api", "CimaApi, CimaClient y configuración de Retrofit."],
         ["data/remote/dto", "DTOs de la API de CIMA."],
         ["data/repository", "AuthRepository, UserRepository, PatientRepository, CompanionRepository, MedicationInfoRepository y mapeos."],

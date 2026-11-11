@@ -52,11 +52,6 @@ import com.meds.app.core.ui.components.MedsWordmark
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.SecondaryActionButton
 
-enum class AuthMode {
-    LOGIN,
-    REGISTER
-}
-
 @Composable
 fun AuthScreen(
     mode: AuthMode,
