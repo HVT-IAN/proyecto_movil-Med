@@ -19,7 +19,7 @@ from reportlab.platypus import (
 )
 
 ROOT = Path(__file__).resolve().parent.parent
-OUTPUT = ROOT / "docs" / "MEDs_Documentacion_Equipo_v1.1.pdf"
+OUTPUT = ROOT / "docs" / "MEDs_Documentacion_Equipo_v26.1.1.pdf"
 
 TEAL = colors.HexColor("#0F6B63")
 DARK = colors.HexColor("#1F2933")
@@ -258,9 +258,9 @@ def header_footer(canvas, doc):
     canvas.setFont("Helvetica", 7.5)
     canvas.setFillColor(MUTED)
     canvas.drawString(LEFT, PAGE_HEIGHT - 30, "MEDs - Documentación funcional y técnica")
-    canvas.drawRightString(PAGE_WIDTH - RIGHT, PAGE_HEIGHT - 30, "Versión 1.1")
+    canvas.drawRightString(PAGE_WIDTH - RIGHT, PAGE_HEIGHT - 30, "Versión 26.1.1")
     canvas.line(LEFT, 36, PAGE_WIDTH - RIGHT, 36)
-    canvas.drawString(LEFT, 26, f"MEDs 1.1 - {DATE_TEXT}")
+    canvas.drawString(LEFT, 26, f"MEDs 26.1.1 - {DATE_TEXT}")
     canvas.drawRightString(PAGE_WIDTH - RIGHT, 26, f"Página {doc.page}")
     canvas.restoreState()
 
@@ -276,7 +276,7 @@ def cover_page(canvas, doc):
     canvas.drawString(LEFT, PAGE_HEIGHT - 116, "Recordatorios de medicación, sin ruido")
     canvas.setFillColor(MUTED)
     canvas.setFont("Helvetica", 8)
-    canvas.drawString(LEFT, 26, f"MEDs 1.1 - {DATE_TEXT}")
+    canvas.drawString(LEFT, 26, f"MEDs 26.1.1 - {DATE_TEXT}")
     canvas.restoreState()
 
 
@@ -308,7 +308,7 @@ def build():
     story.append(Spacer(1, 4))
     story.append(Paragraph(TEAM, cover_team))
     story.append(Spacer(1, 90))
-    story.append(Paragraph("Versión 1.1 - versionCode 2", ParagraphStyle(
+    story.append(Paragraph("Versión 26.1.1 - versionCode 4", ParagraphStyle(
         "CoverVersion", parent=body, fontName="Helvetica-Bold", fontSize=13, leading=18
     )))
     story.append(Paragraph(DATE_TEXT, body))
@@ -318,7 +318,7 @@ def build():
     # Contents
     story.append(H1("Contenido"))
     contents = [
-        ("1.", "Resumen ejecutivo y cambios de la versión 1.1"),
+        ("1.", "Resumen ejecutivo y cambios de la versión 26.1.1"),
         ("2.", "Guía de uso: recorrido completo"),
         ("3.", "Arquitectura MVVM y organización del código"),
         ("4.", "Consumo de API y tratamiento de datos"),
@@ -333,13 +333,13 @@ def build():
     ]
     story.append(T([["Sección", "Contenido"]] + [[number, title] for number, title in contents], [40, CONTENT_WIDTH - 40]))
     story.append(Spacer(1, 14))
-    story.append(P("Este documento reemplaza a la versión 1.0. La versión 1.1 incorpora la consulta de medicamentos con la API REST de CIMA/AEMPS mediante Retrofit, reubica la biometría después del login y del onboarding, agrega el release firmado y actualiza las evidencias a 38 capturas.", small))
+    story.append(P("Este documento reemplaza a la versión 1.0. La versión 26.1.1 incorpora la consulta de medicamentos con la API REST de CIMA/AEMPS mediante Retrofit, reubica la biometría después del login y del onboarding, agrega el release firmado y actualiza las evidencias a 38 capturas.", small))
     story.append(PageBreak())
 
     # 1. Resumen
     story.append(H1("1. Resumen ejecutivo"))
     story.append(P("MEDs es una aplicación Android nativa para recordar medicamentos y sostener la constancia diaria. Está pensada para personas con TDAH y para quienes las acompañan: reduce la carga cognitiva, muestra solo lo necesario y convierte cada toma en una acción de un toque."))
-    story.append(P("El proyecto modela dos roles, paciente y acompañante, un jardín que crece con la constancia, recordatorios locales, un widget de próxima toma, vinculación por QR y una consulta de medicamentos contra la API pública de CIMA/AEMPS. La versión 1.1 agrega Retrofit como cliente REST, una pantalla de consulta con resultados y ficha oficial, y un release firmado."))
+    story.append(P("El proyecto modela dos roles, paciente y acompañante, un jardín que crece con la constancia, recordatorios locales, un widget de próxima toma, vinculación por QR y una consulta de medicamentos contra la API pública de CIMA/AEMPS. La versión 26.1.1 agrega Retrofit como cliente REST, una pantalla de consulta con resultados y ficha oficial, y un release firmado."))
     story.append(H2("1.1 Problema y propuesta"))
     story += BULLETS([
         "Olvidar una toma no es falta de voluntad: es carga cognitiva. Las apps genéricas añaden pasos, notificaciones ruidosas y pantallas densas.",
@@ -361,17 +361,17 @@ def build():
         ["Push", "Firebase Cloud Messaging + Cloud Functions (Node 22)"],
         ["Persistencia local", "DataStore Preferences y DataStore de caché offline, SharedPreferences del widget y AlarmManager"],
         ["Integraciones", "QR con ZXing, biometría con androidx.biometric y widget AppWidgetProvider"],
-        ["Versión", "1.1 - versionCode 3"],
+        ["Versión", "26.1.1 - versionCode 4"],
         ["Entrega", "APK y AAB firmados en dist/"],
     ], [120, CONTENT_WIDTH - 120]))
-    story.append(H2("1.3 Cambios de la versión 1.1"))
+    story.append(H2("1.3 Cambios de la versión 26.1.1"))
     story += BULLETS([
         "Consulta de medicamentos con la API REST pública de CIMA/AEMPS mediante Retrofit, con búsqueda, resultados, ficha, documentos y manejo de errores.",
         "El bloqueo con huella, rostro o PIN es opcional y ya no se pide antes del login: protege el espacio después de autenticarse y completar el onboarding.",
         "Tiempo de gracia de 5 minutos al volver del segundo plano, para no interrumpir cambios rápidos entre apps.",
         "Regeneración de QR que invalida el código anterior, con aviso y rechazo del código usado.",
         "Push de recordatorios y de vinculación con canales de alta importancia, sonido y vibración.",
-        "Release 1.1 firmado, PDF actualizado y evidencias 32 a 38.",
+        "Release 26.1.1 firmado, PDF actualizado y evidencias 32 a 38.",
         "Persistencia offline en DataStore: los medicamentos se guardan sin conexión, sobreviven al cierre de la app y se sincronizan con Firestore al recuperar la red.",
     ])
     story.append(PageBreak())
@@ -379,7 +379,7 @@ def build():
     # 2. Guía de uso
     story.append(H1("2. Guía de uso: recorrido completo"))
     story.append(H2("2.1 Instalar y abrir"))
-    story.append(P("La variante de depuración se compila con .\\gradlew.bat :app:assembleDebug y queda en app\\build\\outputs\\apk\\debug\\app-debug.apk. El release firmado se compila con .\\gradlew.bat :app:assembleRelease :app:bundleRelease y se guarda en dist\\MEDs-release-1.1.apk y dist\\MEDs-release-1.1.aab."))
+    story.append(P("La variante de depuración se compila con .\\gradlew.bat :app:assembleDebug y queda en app\\build\\outputs\\apk\\debug\\app-debug.apk. El release firmado se compila con .\\gradlew.bat :app:assembleRelease :app:bundleRelease y se guarda en dist\\MEDs-release-26.1.1.apk y dist\\MEDs-release-26.1.1.aab."))
     story.append(H2("2.2 Cuenta y acceso"))
     story += BULLETS([
         "Crear cuenta con correo y contraseña, con mínimo 6 caracteres.",
@@ -542,7 +542,7 @@ val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         ["Resultados", "Se muestran 20, priorizando el principio activo exacto y los comercializados"],
         ["Ficha", "Principios activos, ATC, presentaciones, excipientes y enlaces a ficha técnica y prospecto"],
     ], [110, CONTENT_WIDTH - 110]))
-    story.append(P("La búsqueda usa un User-Agent identificable (MEDs-Android/1.1), timeouts de 15 segundos de conexión y 25 de lectura. La respuesta de CIMA puede traer cientos de resultados; el repositorio toma los 20 más relevantes y conserva el total para mostrarlo en la interfaz. El detalle se consulta por nregistro cuando el usuario abre la ficha."))
+    story.append(P("La búsqueda usa un User-Agent identificable (MEDs-Android/26.1.1), timeouts de 15 segundos de conexión y 25 de lectura. La respuesta de CIMA puede traer cientos de resultados; el repositorio toma los 20 más relevantes y conserva el total para mostrarlo en la interfaz. El detalle se consulta por nregistro cuando el usuario abre la ficha."))
     story.append(H2("4.2 Tratamiento de errores"))
     story.append(T([
         ["Situación", "Respuesta en la app"],
@@ -568,7 +568,7 @@ val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
     story.append(H2("4.4 Seguridad de los datos"))
     story.append(P("Las reglas de Firestore validan que cada usuario solo escriba sus propios documentos; el acompañante solo lee el día; las invitaciones son de un solo uso y expiran; los nudges solo los crea un acompañante vinculado; los tokens FCM solo los lee y escribe su dueño. El cliente nunca decide los permisos. La consulta CIMA es pública y no envía datos personales del usuario."))
     story.append(H2("4.5 Qué resuelve el criterio 2"))
-    story.append(P("La rúbrica pide consumo de API y tratamiento de datos. La versión 1.0 se apoyaba solo en Firebase y dejaba un matiz sobre Retrofit. La versión 1.1 incorpora un cliente Retrofit real contra una API REST pública, con DTOs, mapeo a modelos de dominio, consulta de detalle, estados de carga y error, y documentación del flujo. El riesgo del criterio 2 queda cubierto."))
+    story.append(P("La rúbrica pide consumo de API y tratamiento de datos. La versión 1.0 se apoyaba solo en Firebase y dejaba un matiz sobre Retrofit. La versión 26.1.1 incorpora un cliente Retrofit real contra una API REST pública, con DTOs, mapeo a modelos de dominio, consulta de detalle, estados de carga y error, y documentación del flujo. El riesgo del criterio 2 queda cubierto."))
     story.append(PageBreak())
 
     # 5. UI
@@ -732,7 +732,7 @@ Lifecycle.Event.ON_START -> {
     ])
     story.append(H2("8.4 Pruebas realizadas"))
     story.append(P("Se verificaron los recorridos en emulador Pixel 6 Pro: login, registro, modo anónimo, advertencia, vinculación de correo, cierre de sesión, restauración de perfil, alta de medicamento, toma, historial, QR, biometría, widget, canales de notificación, consulta CIMA con resultados, ficha, sin resultados y error sin conexión."))
-    story.append(P("Durante las pruebas se corrigieron defectos reales: la UI no se actualizaba al vincular el correo; la restauración de perfil podía reescribir preferencias del usuario anterior; el panel del acompañante mostraba un error falso justo después de vincular; y el ID vtm de CIMA desbordaba un Int y se cambió a Long. La versión 1.1 se probó en emulador; se recomienda repetir la prueba física en el dispositivo antes de la entrega."))
+    story.append(P("Durante las pruebas se corrigieron defectos reales: la UI no se actualizaba al vincular el correo; la restauración de perfil podía reescribir preferencias del usuario anterior; el panel del acompañante mostraba un error falso justo después de vincular; y el ID vtm de CIMA desbordaba un Int y se cambió a Long. La versión 26.1.1 se probó en emulador; se recomienda repetir la prueba física en el dispositivo antes de la entrega."))
     story.append(PageBreak())
 
     # 9. Repositorio y versión
@@ -747,23 +747,23 @@ Lifecycle.Event.ON_START -> {
         ["Repositorio", "https://github.com/HVT-IAN/proyecto_movil-Med"],
         ["Ramas", "main, develop y feature/consulta-cima-biometria integrada a develop."],
         ["README", "Actualizado con stack, API CIMA, biometría, push, release y estructura."],
-        ["Documentación", "Este PDF, versión 1.1."],
+        ["Documentación", "Este PDF, versión 26.1.1."],
         ["Evidencias", "38 capturas en evidencias/."],
-        ["Versión", "versionName 1.1, versionCode 2."],
+        ["Versión", "versionName 26.1.1, versionCode 4."],
         ["Release", "APK y AAB firmados en dist/."],
-        ["GitHub Release", "v1.1 publicado con APK y AAB adjuntos."],
+        ["GitHub Release", "v1.1 publicado con APK y AAB adjuntos; pendiente de publicar v26.1.1."],
         ["Firma", "Keystore local no versionado; contraseña en keystore.properties, ignorado por Git."],
     ], [120, CONTENT_WIDTH - 120]))
     story.append(H2("9.2 Release firmado"))
-    story.append(P("El release se compila con assembleRelease y bundleRelease. El APK firmado queda en dist/MEDs-release-1.1.apk y el AAB en dist/MEDs-release-1.1.aab. La firma se verificó con apksigner; el certificado es CN=MEDs, OU=Proyecto integrador, O=MEDs, L=Madrid, ST=Madrid, C=ES. El Release v1.1 está publicado en GitHub con el APK y el AAB adjuntos."))
+    story.append(P("El release se compila con assembleRelease y bundleRelease. El APK firmado queda en dist/MEDs-release-26.1.1.apk y el AAB en dist/MEDs-release-26.1.1.aab. La firma se verificó con apksigner; el certificado es CN=MEDs, OU=Proyecto integrador, O=MEDs, L=Madrid, ST=Madrid, C=ES. El Release v1.1 sigue publicado en GitHub con los artefactos anteriores; la versión 26.1.1 se publicará como un release nuevo."))
     story.append(P("El keystore y keystore.properties no se suben al repositorio. Hay que respaldarlos: sin ellos no se pueden publicar actualizaciones con la misma identidad. El APK de depuración también queda en dist/MEDs-debug-production.apk para pruebas internas."))
     story.append(H2("9.3 Checklist antes de entregar"))
     story += BULLETS([
         "Reglas de Firestore publicadas y probadas en producción.",
-        "Release 1.1 firmado e instalado en el dispositivo físico.",
+        "Release 26.1.1 firmado e instalado en el dispositivo físico.",
         "PDF y README actualizados.",
         "Evidencias 32 a 38 incluidas.",
-        "Tag v1.1 y Release de GitHub publicados con APK y AAB adjuntos.",
+        "Tag v26.1.1 y Release de GitHub publicados con APK y AAB adjuntos.",
         "Cuenta de demostración con correo y contraseña disponibles por canal aparte.",
         "Guion de 10 minutos ensayado.",
         "Push: desplegar Functions y Blaze si se va a demostrar con la app cerrada.",
@@ -814,7 +814,7 @@ Lifecycle.Event.ON_START -> {
 
     # 11. Rubric
     story.append(H1("11. Cobertura de la rúbrica"))
-    story.append(P("La rúbrica califica sobre 100 puntos y aporta el 60 % de la unidad. La tabla resume dónde se cubre cada criterio en la versión 1.1."))
+    story.append(P("La rúbrica califica sobre 100 puntos y aporta el 60 % de la unidad. La tabla resume dónde se cubre cada criterio en la versión 26.1.1."))
     story.append(T([
         ["Criterio", "Máx.", "Evidencia en este documento", "Estado"],
         ["1. Arquitectura MVVM y organización", "20", "Secciones 3 y 10.3: capas, StateFlow, repositorios, DI manual y recorridos.", "Cubierto"],
@@ -825,7 +825,7 @@ Lifecycle.Event.ON_START -> {
         ["6. Estabilidad, validaciones y UX", "10", "Sección 8: validaciones, errores, estados, pruebas y correcciones.", "Cubierto"],
         ["7. Repositorio, documentación y versión", "5", "Sección 9: repo, ramas, release firmado, PDF y 38 evidencias.", "Cubierto"],
         ["8. Demostración y defensa", "10", "Sección 10: guion de 10 minutos, mapa de código y preguntas.", "Cubierto"],
-        ["Total", "100", "Criterios 1 a 8 cubiertos en la versión 1.1.", "100/100"],
+        ["Total", "100", "Criterios 1 a 8 cubiertos en la versión 26.1.1.", "100/100"],
     ], [130, 35, CONTENT_WIDTH - 225, 60]))
     story.append(H2("11.1 Riesgos y acciones"))
     story.append(T([
@@ -833,12 +833,12 @@ Lifecycle.Event.ON_START -> {
         ["CIMA no disponible o sin red", "Medio", "La app muestra error y reintento; la consulta no bloquea el resto de la app."],
         ["Guardado sin red antes de sincronizar", "Bajo", "La cola local conserva el cambio y lo reintenta; si se borran los datos de la app antes de sincronizar, ese cambio se pierde."],
         ["Push sin desplegar", "Medio", "Habilitar Blaze, firebase login y desplegar Functions/reglas antes de demostrar el push cerrado."],
-        ["Prueba física pendiente", "Medio", "Instalar el release 1.1 en el dispositivo y repetir login, biometría, QR, widget y CIMA."],
+        ["Prueba física pendiente", "Medio", "Instalar el release 26.1.1 en el dispositivo y repetir login, biometría, QR, widget y CIMA."],
         ["Keystore no respaldado", "Bajo", "Guardar keystore y keystore.properties en un lugar seguro, fuera de Git."],
         ["Cuenta anónima sin vincular", "Bajo", "Vincular un correo en la demo."],
     ], [150, 55, CONTENT_WIDTH - 205]))
     story.append(H2("11.2 Conclusión"))
-    story.append(P("La versión 1.1 cubre los ocho criterios de la rúbrica. El criterio 2 deja de ser un matiz porque incorpora Retrofit y una API REST real; el criterio 7 se completa con repositorio, ramas, release firmado, documentación y evidencias. El push con la app cerrada queda como una funcionalidad extra cuyo despliegue en Blaze debe completarse antes de la demostración."))
+    story.append(P("La versión 26.1.1 cubre los ocho criterios de la rúbrica. El criterio 2 deja de ser un matiz porque incorpora Retrofit y una API REST real; el criterio 7 se completa con repositorio, ramas, release firmado, documentación y evidencias. El push con la app cerrada queda como una funcionalidad extra cuyo despliegue en Blaze debe completarse antes de la demostración."))
     story.append(PageBreak())
 
     # 12. Evidencias
@@ -885,10 +885,10 @@ Lifecycle.Event.ON_START -> {
 .\\gradlew.bat :app:assembleRelease :app:bundleRelease
 
 # Instalar el release
-adb install -r dist\\MEDs-release-1.1.apk
+adb install -r dist\\MEDs-release-26.1.1.apk
 
 # Verificar firma
-apksigner verify --print-certs dist\\MEDs-release-1.1.apk
+apksigner verify --print-certs dist\\MEDs-release-26.1.1.apk
 
 # Emuladores de Firebase (opcional)
 npx --yes firebase-tools@latest emulators:start --only auth,firestore --project medsproto
@@ -913,11 +913,11 @@ firebase deploy --only functions,firestore:rules --project medsproto
     ], [100, CONTENT_WIDTH - 100]))
     story.append(H2("D. Checklist final"))
     story += BULLETS([
-        "Release 1.1 firmado e instalado en el dispositivo físico.",
+        "Release 26.1.1 firmado e instalado en el dispositivo físico.",
         "Reglas de Firestore publicadas y probadas.",
         "Functions y Blaze desplegados si se demuestra push cerrado.",
         "PDF, README y evidencias 1 a 38 actualizados.",
-        "Tag v1.1 y Release de GitHub publicados con APK y AAB adjuntos.",
+        "Tag v26.1.1 y Release de GitHub publicados con APK y AAB adjuntos.",
         "Cuenta de demostración y contraseña disponibles por canal aparte.",
         "Guion de 10 minutos ensayado.",
     ])
@@ -929,7 +929,7 @@ firebase deploy --only functions,firestore:rules --project medsproto
         rightMargin=RIGHT,
         topMargin=TOP,
         bottomMargin=BOTTOM,
-        title="MEDs - Documentación funcional y técnica 1.1",
+        title="MEDs - Documentación funcional y técnica 26.1.1",
         author=TEAM,
         subject="Proyecto integrador - aplicación móvil",
     )

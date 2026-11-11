@@ -1,6 +1,6 @@
 # MEDs
 
-Aplicación Android nativa para recordar medicamentos, pensada para personas con TDAH. Incluye un modo acompañante vinculado mediante un código QR temporal y consulta de medicamentos con la API de CIMA/AEMPS. Versión 1.1.
+Aplicación Android nativa para recordar medicamentos, pensada para personas con TDAH. Incluye un modo acompañante vinculado mediante un código QR temporal y consulta de medicamentos con la API de CIMA/AEMPS. Versión 26.1.1.
 
 **Equipo:** Ian Oscani Diaz Vazquez, Carlos Adrian Alarcon Valencia  
 **Universidad:** Universidad Politécnica de Chiapas  
@@ -8,7 +8,7 @@ Aplicación Android nativa para recordar medicamentos, pensada para personas con
 
 ## Ramas
 
-- `main`: versión estable de entrega (release 1.1).
+- `main`: versión estable de entrega (release 26.1.1).
 - `develop`: desarrollo activo de la aplicación completa.
 - `feature/*`: ramas de trabajo. La consulta CIMA y la biometría se integraron desde `feature/consulta-cima-biometria`.
 
@@ -73,7 +73,7 @@ adb install -r app\build\outputs\apk\debug\app-debug.apk
 
 ## Release firmado
 
-La versión 1.1 usa `versionCode 3` y `versionName "1.1"`.
+La versión 26.1.1 usa `versionCode 4` y `versionName "26.1.1"`. El nombre sigue el esquema `AA.M.m` de la política de versionado: `26` por el año 2026, `1` por el cambio mayor y `1` por el cambio menor.
 
 ```powershell
 .\gradlew.bat :app:assembleRelease :app:bundleRelease
@@ -83,15 +83,15 @@ Artefactos generados:
 
 - `app\build\outputs\apk\release\app-release.apk`
 - `app\build\outputs\bundle\release\app-release.aab`
-- Copias listas para entregar: `dist\MEDs-release-1.1.apk` y `dist\MEDs-release-1.1.aab`
-- Release publicado: `https://github.com/HVT-IAN/proyecto_movil-Med/releases/tag/v1.1`
+- Copias listas para entregar: `dist\MEDs-release-26.1.1.apk` y `dist\MEDs-release-26.1.1.aab`
+- Release publicado: `https://github.com/HVT-IAN/proyecto_movil-Med/releases/tag/v1.1` (pendiente de publicar como `v26.1.1`)
 
 La firma usa `keystore\meds-release.jks` y `keystore.properties`. Ambos están ignorados por Git y no deben subirse. Hay que respaldarlos porque son necesarios para futuras actualizaciones.
 
 Para verificar la firma del APK:
 
 ```powershell
-apksigner verify --print-certs dist\MEDs-release-1.1.apk
+apksigner verify --print-certs dist\MEDs-release-26.1.1.apk
 ```
 
 ## Pruebas locales con emuladores de Firebase
@@ -283,7 +283,7 @@ Las capturas de la verificación funcional están en `evidencias/`. Incluyen sel
 
 ## Documentación para el equipo
 
-La guía funcional y técnica actualizada está en `docs/MEDs_Documentacion_Equipo_v1.1.pdf`. Incluye el recorrido completo de uso, la arquitectura MVVM, la API REST de CIMA con Retrofit, la biometría después del login, el release firmado, la matriz de cobertura de la rúbrica y un guion de demostración de 10 minutos.
+La guía funcional y técnica actualizada está en `docs/MEDs_Documentacion_Equipo_v26.1.1.pdf`. Incluye el recorrido completo de uso, la arquitectura MVVM, la API REST de CIMA con Retrofit, la biometría después del login, el release firmado, la matriz de cobertura de la rúbrica y un guion de demostración de 10 minutos.
 
 ## Validación
 
