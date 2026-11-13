@@ -10,7 +10,12 @@ interface UserRepository {
 
     suspend fun saveDeviceToken(uid: String, token: String)
 
+    /** Obtiene el token FCM del dispositivo y lo registra; false si no fue posible. */
+    suspend fun registerDeviceToken(uid: String): Boolean
+
     suspend fun deleteDeviceToken(uid: String, token: String)
+
+    suspend fun unregisterCurrentDevice(uid: String)
 
     suspend fun loadProfile(uid: String): UserProfile?
 }

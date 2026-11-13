@@ -2,6 +2,8 @@ package com.meds.app.presentation.patient
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.meds.app.core.common.periodicTicker
+import com.meds.app.core.common.todayKey
 import com.meds.app.domain.model.DoseLog
 import com.meds.app.domain.model.Medication
 import com.meds.app.domain.model.MedicationDraft
@@ -11,15 +13,15 @@ import com.meds.app.domain.model.Schedule
 import com.meds.app.domain.repository.AuthRepository
 import com.meds.app.domain.repository.CompanionRepository
 import com.meds.app.domain.repository.PatientRepository
-import com.meds.app.core.common.todayKey
+import com.meds.app.domain.repository.UserRepository
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
@@ -49,6 +51,7 @@ private data class PatientExtras(
 class PatientViewModel(
     private val repository: PatientRepository,
     private val companionRepository: CompanionRepository,
+    private val userRepository: UserRepository,
     authRepository: AuthRepository
 ) : ViewModel() {
     private val uid = authRepository.currentUserId
@@ -77,19 +80,28 @@ class PatientViewModel(
             repository.syncPendingChanges()
         }
         viewModelScope.launch {
-            while (true) {
-                delay(20_000L)
+            periodicTicker(SYNC_INTERVAL_MS).collect {
                 repository.syncPendingChanges()
             }
         }
         viewModelScope.launch {
-            while (true) {
-                delay(30_000L)
+            periodicTicker(DATE_CHECK_INTERVAL_MS, initialDelayMillis = 0L).collect {
                 val newDate = todayKey()
                 if (newDate != currentDate.value) {
                     currentDate.value = newDate
                     ensureTodayDoses()
                 }
+            }
+        }
+        registerDeviceToken()
+    }
+
+    private fun registerDeviceToken() {
+        val uid = uid ?: return
+        viewModelScope.launch {
+            repeat(DEVICE_TOKEN_ATTEMPTS) { attempt ->
+                if (userRepository.registerDeviceToken(uid)) return@launch
+                delay(2_000L * (attempt + 1))
             }
         }
     }
@@ -232,5 +244,11 @@ class PatientViewModel(
 
     fun clearError() {
         extras.update { it.copy(error = null) }
+    }
+
+    private companion object {
+        const val SYNC_INTERVAL_MS = 20_000L
+        const val DATE_CHECK_INTERVAL_MS = 30_000L
+        const val DEVICE_TOKEN_ATTEMPTS = 3
     }
 }

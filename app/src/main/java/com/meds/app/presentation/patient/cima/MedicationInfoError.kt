@@ -1,4 +1,4 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.cima
 
 import com.google.gson.JsonParseException
 import retrofit2.HttpException

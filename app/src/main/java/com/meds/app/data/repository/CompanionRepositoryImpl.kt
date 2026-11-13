@@ -3,25 +3,25 @@ package com.meds.app.data.repository
 import com.google.firebase.Timestamp
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.DocumentReference
-import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.QuerySnapshot
+import com.google.firebase.firestore.FirebaseFirestoreException
 import com.google.firebase.firestore.SetOptions
+import com.meds.app.core.common.AccessDeniedException
+import com.meds.app.data.remote.firestore.asFlow
 import com.meds.app.domain.model.CompanionDay
 import com.meds.app.domain.model.CompanionLink
 import com.meds.app.domain.model.LinkedPatient
 import com.meds.app.domain.model.Nudge
 import com.meds.app.domain.model.PairingInvite
-import com.meds.app.domain.model.PlantState
 import com.meds.app.domain.repository.CompanionRepository
-import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.tasks.await
 import java.security.SecureRandom
 import java.util.Date
@@ -42,7 +42,7 @@ class CompanionRepositoryImpl(
 
     override fun observeCompanions(patientUid: String): Flow<List<CompanionLink>> {
         if (patientUid.isBlank()) return flowOf(emptyList())
-        return queryFlow(userRef(patientUid).collection("companions"))
+        return userRef(patientUid).collection("companions").asFlow()
             .map { snapshot ->
                 snapshot.toCompanionLinks().sortedByDescending { it.linkedAt }
             }
@@ -50,7 +50,7 @@ class CompanionRepositoryImpl(
 
     override fun observeLinkedPatients(companionUid: String): Flow<List<LinkedPatient>> {
         if (companionUid.isBlank()) return flowOf(emptyList())
-        return queryFlow(userRef(companionUid).collection("linkedPatients"))
+        return userRef(companionUid).collection("linkedPatients").asFlow()
             .map { snapshot ->
                 snapshot.toLinkedPatients().sortedByDescending { it.linkedAt }
             }
@@ -58,7 +58,7 @@ class CompanionRepositoryImpl(
 
     override fun observeNudges(patientUid: String): Flow<List<Nudge>> {
         if (patientUid.isBlank()) return flowOf(emptyList())
-        return queryFlow(userRef(patientUid).collection("nudges"))
+        return userRef(patientUid).collection("nudges").asFlow()
             .map { snapshot ->
                 snapshot.toNudges().sortedByDescending { it.createdAt }
             }
@@ -66,18 +66,19 @@ class CompanionRepositoryImpl(
 
     override fun observePatientDay(patientUid: String, dateKey: String): Flow<CompanionDay> {
         if (patientUid.isBlank()) return flowOf(CompanionDay())
-        val nameFlow = documentFlow(userRef(patientUid))
+        val nameFlow = userRef(patientUid).asFlow()
             .map { it.getString("name").orEmpty() }
-        val medicationsFlow = queryFlow(userRef(patientUid).collection("medications"))
+        val medicationsFlow = userRef(patientUid).collection("medications").asFlow()
             .map { it.toMedications() }
-        val schedulesFlow = queryFlow(userRef(patientUid).collection("schedules"))
+        val schedulesFlow = userRef(patientUid).collection("schedules").asFlow()
             .map { it.toSchedules() }
-        val dosesFlow = queryFlow(
-            userRef(patientUid).collection("doseLogs").whereEqualTo("dateKey", dateKey)
-        ).map { it.toDoseLogs().sortedBy { dose -> dose.scheduledAt } }
-        val plantFlow = documentFlow(
-            userRef(patientUid).collection("plant").document("state")
-        ).map { it.toPlantState() }
+        val dosesFlow = userRef(patientUid).collection("doseLogs")
+            .whereEqualTo("dateKey", dateKey)
+            .asFlow()
+            .map { it.toDoseLogs().sortedBy { dose -> dose.scheduledAt } }
+        val plantFlow = userRef(patientUid).collection("plant").document("state")
+            .asFlow()
+            .map { it.toPlantState() }
 
         return combine(
             nameFlow,
@@ -94,6 +95,17 @@ class CompanionRepositoryImpl(
                 plant = plant
             )
         }
+            .retryWhen { cause, attempt ->
+                // La escritura local del vínculo puede emitirse antes de que
+                // Firestore confirme el lote y aplique las reglas.
+                if (cause.isPermissionDenied() && attempt < PERMISSION_RETRIES) {
+                    delay(700L * (attempt + 1))
+                    true
+                } else {
+                    false
+                }
+            }
+            .catch { throwable -> throw throwable.toAccessError() }
     }
 
     override suspend fun createInvite(
@@ -244,31 +256,21 @@ class CompanionRepositoryImpl(
             .joinToString("")
     }
 
-    private fun queryFlow(query: Query): Flow<QuerySnapshot> = callbackFlow {
-        val registration = query.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                close(error)
-            } else if (snapshot != null) {
-                trySend(snapshot)
-            }
-        }
-        awaitClose { registration.remove() }
-    }
+    private fun Throwable.isPermissionDenied(): Boolean =
+        (this as? FirebaseFirestoreException)?.code ==
+            FirebaseFirestoreException.Code.PERMISSION_DENIED
 
-    private fun documentFlow(reference: DocumentReference): Flow<DocumentSnapshot> = callbackFlow {
-        val registration = reference.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                close(error)
-            } else if (snapshot != null) {
-                trySend(snapshot)
-            }
+    private fun Throwable.toAccessError(): Throwable =
+        if (isPermissionDenied()) {
+            AccessDeniedException("El acceso a este paciente fue retirado.", this)
+        } else {
+            this
         }
-        awaitClose { registration.remove() }
-    }
 
     private companion object {
         const val INVITE_MINUTES = 10L
         const val CODE_LENGTH = 8
         const val CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+        const val PERMISSION_RETRIES = 3L
     }
 }

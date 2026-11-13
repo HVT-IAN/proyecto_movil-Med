@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.meds.app.core.common.isValidEmail
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.MedsWordmark
 import com.meds.app.core.ui.components.PrimaryActionButton
@@ -421,10 +422,4 @@ private fun MessageCard(
             color = contentColor
         )
     }
-}
-
-private fun isValidEmail(value: String): Boolean {
-    val trimmed = value.trim()
-    if (trimmed.isEmpty()) return false
-    return Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$").matches(trimmed)
 }

@@ -4,7 +4,9 @@ import android.app.AlarmManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
 import com.meds.app.domain.model.DoseLog
 import com.meds.app.domain.model.doseLogId
@@ -236,9 +238,23 @@ class AlarmScheduler(context: Context) {
         }.getOrNull()
     }
 
-    private companion object {
-        const val PREFERENCES = "meds_alarms"
-        const val KEY_ALARMS = "alarms"
-        const val DAY_MILLIS = 24L * 60L * 60L * 1000L
+    companion object {
+        private const val PREFERENCES = "meds_alarms"
+        private const val KEY_ALARMS = "alarms"
+        private const val DAY_MILLIS = 24L * 60L * 60L * 1000L
+
+        /**
+         * Intent para pedir el acceso a alarmas exactas cuando el sistema lo
+         * requiere. Devuelve null si no hace falta o no está disponible.
+         */
+        fun exactAlarmSettingsIntent(context: Context): Intent? {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) return null
+            val alarmManager = context.getSystemService(AlarmManager::class.java) ?: return null
+            if (alarmManager.canScheduleExactAlarms()) return null
+            return Intent(
+                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                Uri.parse("package:${context.packageName}")
+            )
+        }
     }
 }

@@ -1,8 +1,6 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.home
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -13,12 +11,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.CircularProgressIndicator
@@ -36,9 +32,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.meds.app.domain.model.DoseLog
-import com.meds.app.domain.model.DoseStatus
-import com.meds.app.domain.model.Nudge
+import com.meds.app.core.common.currentGreeting
+import com.meds.app.core.common.formatDateKey
+import com.meds.app.core.common.formatTime
+import com.meds.app.core.common.relativeTime
+import com.meds.app.core.common.todayKey
 import com.meds.app.core.ui.components.DoseLogRow
 import com.meds.app.core.ui.components.HeroCard
 import com.meds.app.core.ui.components.MedsCard
@@ -48,12 +46,9 @@ import com.meds.app.core.ui.components.SecondaryActionButton
 import com.meds.app.core.ui.components.SectionLabel
 import com.meds.app.core.ui.components.TextActionButton
 import com.meds.app.core.ui.theme.LocalMedsColors
-import com.meds.app.core.common.formatTime
-import com.meds.app.core.common.relativeTime
+import com.meds.app.domain.model.DoseLog
+import com.meds.app.presentation.patient.PatientUiState
 import kotlinx.coroutines.delay
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun HomeScreen(
@@ -74,32 +69,16 @@ fun HomeScreen(
         }
     }
 
-    val locale = Locale.forLanguageTag("es")
-    val today = LocalDate.now()
-    val dateText = remember(today) {
-        today.format(DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", locale))
-            .replaceFirstChar { character ->
-                if (character.isLowerCase()) character.titlecase(locale) else character.toString()
-            }
-    }
-    val greeting = when (java.time.LocalTime.now().hour) {
-        in 5..11 -> "Buenos días"
-        in 12..19 -> "Buenas tardes"
-        else -> "Buenas noches"
-    }
+    val dateText = remember(now / 60_000L) { formatDateKey(todayKey()) }
+    val greeting = currentGreeting()
     val displayName = name.trim()
 
-    val pending = state.todayDoses.filter {
-        it.status == DoseStatus.PENDING || it.status == DoseStatus.SNOOZED
-    }
-    val overdue = pending.filter { it.scheduledAt <= now }.minByOrNull { it.scheduledAt }
-    val upcoming = pending.filter { it.scheduledAt > now }.minByOrNull { it.scheduledAt }
-    val nextDose = overdue ?: upcoming
-    val takenCount = state.todayDoses.count { it.status == DoseStatus.TAKEN }
-    val totalCount = state.todayDoses.size
+    val nextDose = state.nextPendingDose(now)
+    val takenCount = state.takenCount
+    val totalCount = state.totalCount
     val isLate = nextDose != null && nextDose.scheduledAt <= now
     val pendingColor = LocalMedsColors.current.pending
-    val latestNudge = state.nudges.firstOrNull { !it.read }
+    val latestNudge = state.latestUnreadNudge
 
     Column(
         modifier = Modifier
@@ -347,61 +326,5 @@ fun HomeScreen(
         }
 
         Spacer(Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun NudgeBanner(
-    nudge: Nudge,
-    onDismiss: () -> Unit
-) {
-    val colors = LocalMedsColors.current
-    MedsCard {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(colors.companionContainer, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = null,
-                    tint = colors.companion,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Recordatorio de ${nudge.fromName.ifBlank { "tu acompañante" }}",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = nudge.message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                if (nudge.createdAt > 0L) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = relativeTime(nudge.createdAt),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(8.dp))
-        TextActionButton(
-            text = "Entendido",
-            onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth()
-        )
     }
 }

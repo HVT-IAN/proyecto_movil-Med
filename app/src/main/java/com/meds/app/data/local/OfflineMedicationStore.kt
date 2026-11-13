@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import org.json.JSONArray
-import org.json.JSONObject
 
 private val Context.medsOfflineDataStore by preferencesDataStore(name = "meds_offline_cache")
 
@@ -58,6 +56,21 @@ data class OfflinePlanState(
 
     fun deletedMedicationIds(): Set<String> =
         pendingDeletes.map { it.medicationId }.toSet()
+
+    fun mergeMedications(remote: List<Medication>): List<Medication> {
+        val deleted = deletedMedicationIds()
+        val pending = pendingMedicationIds()
+        return (remote.filter { it.id !in deleted && it.id !in pending } + pendingMedications())
+            .distinctBy { it.id }
+    }
+
+    fun mergeSchedules(remote: List<Schedule>): List<Schedule> {
+        val deleted = deletedMedicationIds()
+        val pending = pendingMedicationIds()
+        return (remote.filter {
+            it.medicationId !in deleted && it.medicationId !in pending
+        } + pendingSchedules()).distinctBy { it.id }
+    }
 }
 
 class OfflineMedicationStore(private val context: Context) {
@@ -84,10 +97,10 @@ class OfflineMedicationStore(private val context: Context) {
     ) {
         editFor(uid) { preferences ->
             if (medications != null) {
-                preferences[medicationsKey] = encodeMedications(medications)
+                preferences[medicationsKey] = OfflinePlanJsonCodec.encodeMedications(medications)
             }
             if (schedules != null) {
-                preferences[schedulesKey] = encodeSchedules(schedules)
+                preferences[schedulesKey] = OfflinePlanJsonCodec.encodeSchedules(schedules)
             }
         }
     }
@@ -95,34 +108,34 @@ class OfflineMedicationStore(private val context: Context) {
     /** Encola un alta o edición antes de intentar la escritura remota. */
     suspend fun enqueueSave(uid: String, draft: MedicationDraft, isNew: Boolean) {
         editFor(uid) { preferences ->
-            val pending = decodePendingSaves(preferences[pendingSavesKey])
+            val pending = OfflinePlanJsonCodec.decodePendingSaves(preferences[pendingSavesKey])
                 .filterNot { it.draft.id == draft.id } + PendingMedicationSave(draft, isNew)
-            preferences[pendingSavesKey] = encodePendingSaves(pending)
+            preferences[pendingSavesKey] = OfflinePlanJsonCodec.encodePendingSaves(pending)
 
-            val deletes = decodePendingDeletes(preferences[pendingDeletesKey])
+            val deletes = OfflinePlanJsonCodec.decodePendingDeletes(preferences[pendingDeletesKey])
                 .filterNot { it.medicationId == draft.id }
-            preferences[pendingDeletesKey] = encodePendingDeletes(deletes)
+            preferences[pendingDeletesKey] = OfflinePlanJsonCodec.encodePendingDeletes(deletes)
         }
     }
 
     /** Confirma un guardado: sale de la cola y pasa a la instantánea local. */
     suspend fun completeSave(uid: String, draft: MedicationDraft) {
         editFor(uid) { preferences ->
-            val pending = decodePendingSaves(preferences[pendingSavesKey])
+            val pending = OfflinePlanJsonCodec.decodePendingSaves(preferences[pendingSavesKey])
                 .filterNot { it.draft.id == draft.id }
-            preferences[pendingSavesKey] = encodePendingSaves(pending)
+            preferences[pendingSavesKey] = OfflinePlanJsonCodec.encodePendingSaves(pending)
 
             val medication = draft.toMedicationModel()
-            val medications = decodeMedications(preferences[medicationsKey])
+            val medications = OfflinePlanJsonCodec.decodeMedications(preferences[medicationsKey])
                 .filterNot { it.id == medication.id } + medication
-            preferences[medicationsKey] = encodeMedications(medications)
+            preferences[medicationsKey] = OfflinePlanJsonCodec.encodeMedications(medications)
 
             draft.toScheduleModel()?.let { schedule ->
-                val schedules = decodeSchedules(preferences[schedulesKey])
+                val schedules = OfflinePlanJsonCodec.decodeSchedules(preferences[schedulesKey])
                     .filterNot {
                         it.id == schedule.id || it.medicationId == schedule.medicationId
                     } + schedule
-                preferences[schedulesKey] = encodeSchedules(schedules)
+                preferences[schedulesKey] = OfflinePlanJsonCodec.encodeSchedules(schedules)
             }
         }
     }
@@ -130,39 +143,39 @@ class OfflineMedicationStore(private val context: Context) {
     /** Descarta un guardado local que Firestore rechazó por un error no recuperable. */
     suspend fun discardSave(uid: String, medicationId: String) {
         editFor(uid) { preferences ->
-            val pending = decodePendingSaves(preferences[pendingSavesKey])
+            val pending = OfflinePlanJsonCodec.decodePendingSaves(preferences[pendingSavesKey])
                 .filterNot { it.draft.id == medicationId }
-            preferences[pendingSavesKey] = encodePendingSaves(pending)
+            preferences[pendingSavesKey] = OfflinePlanJsonCodec.encodePendingSaves(pending)
         }
     }
 
     /** Encola un borrado antes de intentar la escritura remota. */
     suspend fun enqueueDelete(uid: String, medicationId: String, scheduleId: String?) {
         editFor(uid) { preferences ->
-            val pending = decodePendingSaves(preferences[pendingSavesKey])
+            val pending = OfflinePlanJsonCodec.decodePendingSaves(preferences[pendingSavesKey])
                 .filterNot { it.draft.id == medicationId }
-            preferences[pendingSavesKey] = encodePendingSaves(pending)
+            preferences[pendingSavesKey] = OfflinePlanJsonCodec.encodePendingSaves(pending)
 
-            val deletes = decodePendingDeletes(preferences[pendingDeletesKey])
+            val deletes = OfflinePlanJsonCodec.decodePendingDeletes(preferences[pendingDeletesKey])
                 .filterNot { it.medicationId == medicationId } +
                 PendingMedicationDelete(medicationId, scheduleId)
-            preferences[pendingDeletesKey] = encodePendingDeletes(deletes)
+            preferences[pendingDeletesKey] = OfflinePlanJsonCodec.encodePendingDeletes(deletes)
         }
     }
 
     /** Confirma un borrado y lo elimina también de la instantánea. */
     suspend fun completeDelete(uid: String, medicationId: String, scheduleId: String?) {
         editFor(uid) { preferences ->
-            val deletes = decodePendingDeletes(preferences[pendingDeletesKey])
+            val deletes = OfflinePlanJsonCodec.decodePendingDeletes(preferences[pendingDeletesKey])
                 .filterNot { it.medicationId == medicationId }
-            preferences[pendingDeletesKey] = encodePendingDeletes(deletes)
+            preferences[pendingDeletesKey] = OfflinePlanJsonCodec.encodePendingDeletes(deletes)
 
-            preferences[medicationsKey] = encodeMedications(
-                decodeMedications(preferences[medicationsKey])
+            preferences[medicationsKey] = OfflinePlanJsonCodec.encodeMedications(
+                OfflinePlanJsonCodec.decodeMedications(preferences[medicationsKey])
                     .filterNot { it.id == medicationId }
             )
-            preferences[schedulesKey] = encodeSchedules(
-                decodeSchedules(preferences[schedulesKey]).filterNot {
+            preferences[schedulesKey] = OfflinePlanJsonCodec.encodeSchedules(
+                OfflinePlanJsonCodec.decodeSchedules(preferences[schedulesKey]).filterNot {
                     it.medicationId == medicationId ||
                         (!scheduleId.isNullOrBlank() && it.id == scheduleId)
                 }
@@ -172,9 +185,9 @@ class OfflineMedicationStore(private val context: Context) {
 
     suspend fun removePendingDelete(uid: String, medicationId: String) {
         editFor(uid) { preferences ->
-            val deletes = decodePendingDeletes(preferences[pendingDeletesKey])
+            val deletes = OfflinePlanJsonCodec.decodePendingDeletes(preferences[pendingDeletesKey])
                 .filterNot { it.medicationId == medicationId }
-            preferences[pendingDeletesKey] = encodePendingDeletes(deletes)
+            preferences[pendingDeletesKey] = OfflinePlanJsonCodec.encodePendingDeletes(deletes)
         }
     }
 
@@ -195,10 +208,10 @@ class OfflineMedicationStore(private val context: Context) {
     private fun Preferences.toPlanState(uid: String): OfflinePlanState {
         if (this[ownerKey] != uid) return OfflinePlanState()
         return OfflinePlanState(
-            medications = decodeMedications(this[medicationsKey]),
-            schedules = decodeSchedules(this[schedulesKey]),
-            pendingSaves = decodePendingSaves(this[pendingSavesKey]),
-            pendingDeletes = decodePendingDeletes(this[pendingDeletesKey])
+            medications = OfflinePlanJsonCodec.decodeMedications(this[medicationsKey]),
+            schedules = OfflinePlanJsonCodec.decodeSchedules(this[schedulesKey]),
+            pendingSaves = OfflinePlanJsonCodec.decodePendingSaves(this[pendingSavesKey]),
+            pendingDeletes = OfflinePlanJsonCodec.decodePendingDeletes(this[pendingDeletesKey])
         )
     }
 }
@@ -224,164 +237,4 @@ internal fun MedicationDraft.toScheduleModel(): Schedule? {
         anchor = anchor,
         enabled = true
     )
-}
-
-private fun encodeMedications(medications: List<Medication>): String =
-    JSONArray().apply {
-        medications.forEach { medication ->
-            put(
-                JSONObject().apply {
-                    put("id", medication.id)
-                    put("name", medication.name)
-                    put("dose", medication.dose)
-                    put("form", medication.form)
-                    put("stock", medication.stock)
-                    put("active", medication.active)
-                    put("createdAt", medication.createdAt)
-                }
-            )
-        }
-    }.toString()
-
-private fun decodeMedications(raw: String?): List<Medication> {
-    val array = runCatching { JSONArray(raw.orEmpty()) }.getOrNull() ?: return emptyList()
-    return buildList {
-        for (index in 0 until array.length()) {
-            val item = array.optJSONObject(index) ?: continue
-            val id = item.optString("id")
-            if (id.isBlank()) continue
-            add(
-                Medication(
-                    id = id,
-                    name = item.optString("name"),
-                    dose = item.optString("dose"),
-                    form = item.optString("form", "Tableta"),
-                    stock = item.optInt("stock"),
-                    active = item.optBoolean("active", true),
-                    createdAt = item.optLong("createdAt")
-                )
-            )
-        }
-    }
-}
-
-private fun encodeSchedules(schedules: List<Schedule>): String =
-    JSONArray().apply {
-        schedules.forEach { schedule ->
-            put(
-                JSONObject().apply {
-                    put("id", schedule.id)
-                    put("medicationId", schedule.medicationId)
-                    put("times", JSONArray(schedule.times))
-                    put("daysMask", schedule.daysMask)
-                    put("anchor", schedule.anchor)
-                    put("enabled", schedule.enabled)
-                }
-            )
-        }
-    }.toString()
-
-private fun decodeSchedules(raw: String?): List<Schedule> {
-    val array = runCatching { JSONArray(raw.orEmpty()) }.getOrNull() ?: return emptyList()
-    return buildList {
-        for (index in 0 until array.length()) {
-            val item = array.optJSONObject(index) ?: continue
-            val id = item.optString("id")
-            val medicationId = item.optString("medicationId")
-            if (id.isBlank() || medicationId.isBlank()) continue
-            add(
-                Schedule(
-                    id = id,
-                    medicationId = medicationId,
-                    times = item.optJSONArray("times").toStringList(),
-                    daysMask = item.optInt("daysMask", 127),
-                    anchor = item.optString("anchor", "Sin rutina"),
-                    enabled = item.optBoolean("enabled", true)
-                )
-            )
-        }
-    }
-}
-
-private fun encodePendingSaves(pending: List<PendingMedicationSave>): String =
-    JSONArray().apply {
-        pending.forEach { save ->
-            val draft = save.draft
-            put(
-                JSONObject().apply {
-                    put("id", draft.id ?: JSONObject.NULL)
-                    put("scheduleId", draft.scheduleId ?: JSONObject.NULL)
-                    put("name", draft.name)
-                    put("dose", draft.dose)
-                    put("form", draft.form)
-                    put("times", JSONArray(draft.times))
-                    put("stock", draft.stock)
-                    put("anchor", draft.anchor)
-                    put("isNew", save.isNew)
-                }
-            )
-        }
-    }.toString()
-
-private fun decodePendingSaves(raw: String?): List<PendingMedicationSave> {
-    val array = runCatching { JSONArray(raw.orEmpty()) }.getOrNull() ?: return emptyList()
-    return buildList {
-        for (index in 0 until array.length()) {
-            val item = array.optJSONObject(index) ?: continue
-            val id = item.optString("id").takeUnless { it.isBlank() || it == "null" }
-            if (id == null) continue
-            val draft = MedicationDraft(
-                id = id,
-                scheduleId = item.optString("scheduleId")
-                    .takeUnless { it.isBlank() || it == "null" },
-                name = item.optString("name"),
-                dose = item.optString("dose"),
-                form = item.optString("form", "Tableta"),
-                times = item.optJSONArray("times").toStringList(),
-                stock = item.optInt("stock"),
-                anchor = item.optString("anchor", "Sin rutina")
-            )
-            add(PendingMedicationSave(draft, item.optBoolean("isNew", true)))
-        }
-    }
-}
-
-private fun encodePendingDeletes(pending: List<PendingMedicationDelete>): String =
-    JSONArray().apply {
-        pending.forEach { delete ->
-            put(
-                JSONObject().apply {
-                    put("medicationId", delete.medicationId)
-                    put("scheduleId", delete.scheduleId ?: JSONObject.NULL)
-                }
-            )
-        }
-    }.toString()
-
-private fun decodePendingDeletes(raw: String?): List<PendingMedicationDelete> {
-    val array = runCatching { JSONArray(raw.orEmpty()) }.getOrNull() ?: return emptyList()
-    return buildList {
-        for (index in 0 until array.length()) {
-            val item = array.optJSONObject(index) ?: continue
-            val medicationId = item.optString("medicationId")
-            if (medicationId.isBlank()) continue
-            add(
-                PendingMedicationDelete(
-                    medicationId = medicationId,
-                    scheduleId = item.optString("scheduleId")
-                        .takeUnless { it.isBlank() || it == "null" }
-                )
-            )
-        }
-    }
-}
-
-private fun JSONArray?.toStringList(): List<String> {
-    if (this == null) return emptyList()
-    return buildList {
-        for (index in 0 until length()) {
-            val value = optString(index)
-            if (value.isNotBlank()) add(value)
-        }
-    }
 }

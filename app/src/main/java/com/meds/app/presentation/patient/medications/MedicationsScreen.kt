@@ -1,7 +1,6 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.medications
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -31,12 +30,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.meds.app.domain.model.Medication
-import com.meds.app.domain.model.Schedule
+import com.meds.app.core.common.formatTimeOfDay
 import com.meds.app.core.ui.components.EmptyState
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.theme.LocalMedsColors
-import com.meds.app.core.common.formatTimeOfDay
+import com.meds.app.domain.model.Medication
+import com.meds.app.domain.model.Schedule
+import com.meds.app.presentation.patient.PatientUiState
 
 @Composable
 fun MedicationsScreen(
