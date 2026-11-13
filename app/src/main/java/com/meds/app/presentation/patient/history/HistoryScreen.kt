@@ -1,4 +1,4 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.history
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,12 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.meds.app.domain.model.DoseLog
-import com.meds.app.domain.model.DoseStatus
+import com.meds.app.core.common.formatDateKey
 import com.meds.app.core.ui.components.DoseLogRow
 import com.meds.app.core.ui.components.EmptyState
 import com.meds.app.core.ui.components.MedsCard
-import com.meds.app.core.common.formatDateKey
+import com.meds.app.domain.model.DoseLog
+import com.meds.app.domain.model.DoseStatus
 
 @Composable
 fun HistoryScreen(

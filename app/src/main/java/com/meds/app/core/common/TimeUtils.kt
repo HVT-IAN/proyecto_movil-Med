@@ -2,6 +2,7 @@ package com.meds.app.core.common
 
 import java.time.Instant
 import java.time.LocalDate
+import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -10,6 +11,12 @@ import kotlin.math.abs
 private val spanishLocale = Locale.forLanguageTag("es")
 
 fun todayKey(): String = LocalDate.now().toString()
+
+fun currentGreeting(hour: Int = LocalTime.now().hour): String = when (hour) {
+    in 5..11 -> "Buenos días"
+    in 12..19 -> "Buenas tardes"
+    else -> "Buenas noches"
+}
 
 fun formatTime(epochMillis: Long): String {
     if (epochMillis <= 0L) return "--:--"
@@ -59,4 +66,11 @@ fun formatTimeOfDay(time: String): String {
         val minute = parts.getOrNull(1)?.toIntOrNull() ?: 0
         String.format(Locale.US, "%02d:%02d", hour, minute)
     }.getOrDefault(time)
+}
+
+fun formatCountdownMillis(millis: Long): String {
+    val totalSeconds = (millis.coerceAtLeast(0L) / 1_000L).toInt()
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }

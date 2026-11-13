@@ -3,9 +3,12 @@ package com.meds.app.data.repository
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.messaging.FirebaseMessaging
+import com.meds.app.BuildConfig
 import com.meds.app.domain.model.UserProfile
 import com.meds.app.domain.repository.UserRepository
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Implementación del perfil y dispositivos en Cloud Firestore. */
 class UserRepositoryImpl(
@@ -50,12 +53,31 @@ class UserRepositoryImpl(
             .await()
     }
 
+    override suspend fun registerDeviceToken(uid: String): Boolean {
+        if (uid.isBlank() || BuildConfig.USE_FIREBASE_EMULATOR) return false
+        val token = runCatching { FirebaseMessaging.getInstance().token.await() }
+            .getOrNull()
+            ?.takeIf { it.isNotBlank() }
+            ?: return false
+        return runCatching { saveDeviceToken(uid, token) }.isSuccess
+    }
+
     override suspend fun deleteDeviceToken(uid: String, token: String) {
         if (uid.isBlank() || token.isBlank()) return
         firestore.collection("users").document(uid)
             .collection("devices").document(token)
             .delete()
             .await()
+    }
+
+    override suspend fun unregisterCurrentDevice(uid: String) {
+        if (uid.isBlank()) return
+        runCatching {
+            withTimeoutOrNull(3_000L) {
+                val token = FirebaseMessaging.getInstance().token.await()
+                deleteDeviceToken(uid, token)
+            }
+        }
     }
 
     override suspend fun loadProfile(uid: String): UserProfile? {

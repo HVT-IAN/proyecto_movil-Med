@@ -1,4 +1,4 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.garden
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,18 +20,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.meds.app.domain.model.PlantState
 import com.meds.app.core.ui.components.HeroCard
 import com.meds.app.core.ui.components.LabelValue
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PlantArt
+import com.meds.app.domain.model.PlantState
 
 @Composable
 fun GardenScreen(plant: PlantState) {
-    val stage = plant.level.coerceIn(1, 5)
-    val isMaxLevel = stage >= 5
-    val stageXp = if (isMaxLevel) 50 else plant.xp % 50
-    val progress = if (isMaxLevel) 1f else stageXp / 50f
+    val stage = plant.stage
+    val isMaxLevel = plant.isMaxLevel
+    val stageXp = plant.stageXp
+    val progress = plant.stageProgress
 
     Column(
         modifier = Modifier
@@ -67,7 +67,7 @@ fun GardenScreen(plant: PlantState) {
             }
             Spacer(Modifier.height(12.dp))
             Text(
-                text = "Etapa $stage de 5",
+                text = "Etapa $stage de ${PlantState.MAX_LEVEL}",
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -76,7 +76,7 @@ fun GardenScreen(plant: PlantState) {
                 text = if (isMaxLevel) {
                     "Tu planta llegó a su etapa más plena."
                 } else {
-                    "$stageXp de 50 puntos para la siguiente etapa"
+                    "$stageXp de ${PlantState.XP_PER_LEVEL} puntos para la siguiente etapa"
                 },
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant

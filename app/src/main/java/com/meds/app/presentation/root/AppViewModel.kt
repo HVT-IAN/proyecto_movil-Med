@@ -2,44 +2,24 @@ package com.meds.app.presentation.root
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.FirebaseNetworkException
-import com.google.firebase.FirebaseTooManyRequestsException
-import com.google.firebase.auth.FirebaseAuthException
-import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
-import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
-import com.google.firebase.auth.FirebaseAuthUserCollisionException
-import com.google.firebase.auth.FirebaseAuthWeakPasswordException
-import com.google.firebase.messaging.FirebaseMessaging
-import com.meds.app.data.local.OfflineMedicationStore
-import com.meds.app.data.local.PreferencesStore
 import com.meds.app.domain.model.UserRole
 import com.meds.app.domain.repository.AuthRepository
+import com.meds.app.domain.repository.MedicationCacheRepository
+import com.meds.app.domain.repository.SessionRepository
 import com.meds.app.domain.repository.UserRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.tasks.await
 import kotlinx.coroutines.withTimeoutOrNull
-
-private data class LocalPreferences(
-    val role: String?,
-    val name: String,
-    val onboarded: Boolean,
-    val biometricEnabled: Boolean,
-    val biometricAsked: Boolean
-)
 
 class AppViewModel(
     private val authRepository: AuthRepository,
     private val userRepository: UserRepository,
-    private val preferences: PreferencesStore,
-    private val offlineStore: OfflineMedicationStore
+    private val sessionRepository: SessionRepository,
+    private val medicationCacheRepository: MedicationCacheRepository
 ) : ViewModel() {
     private val _state = MutableStateFlow(AppUiState())
     val state: StateFlow<AppUiState> = _state.asStateFlow()
@@ -79,15 +59,7 @@ class AppViewModel(
             }
         }
         viewModelScope.launch {
-            combine(
-                preferences.role,
-                preferences.name,
-                preferences.onboarded,
-                preferences.biometricEnabled,
-                preferences.biometricAsked
-            ) { role, name, onboarded, biometricEnabled, biometricAsked ->
-                LocalPreferences(role, name, onboarded, biometricEnabled, biometricAsked)
-            }.collect { local ->
+            sessionRepository.session.collect { local ->
                 _state.update {
                     it.copy(
                         role = local.role?.let { value ->
@@ -116,7 +88,7 @@ class AppViewModel(
                 UserRole.entries.firstOrNull { entry -> entry.name == value }
             }
             if (profile != null && role != null) {
-                preferences.restoreProfile(role.name, profile.name.orEmpty())
+                sessionRepository.restoreProfile(role.name, profile.name.orEmpty())
                 _state.update {
                     it.copy(
                         role = role,
@@ -159,13 +131,11 @@ class AppViewModel(
                     }
                 }
                 .onFailure { throwable ->
-                    val message = if (throwable is FirebaseAuthUserCollisionException) {
-                        "Ese correo ya está en uso. Prueba con otro para no perder los datos de esta sesión."
-                    } else {
-                        authErrorMessage(throwable)
-                    }
                     _state.update {
-                        it.copy(authLoading = false, authError = message)
+                        it.copy(
+                            authLoading = false,
+                            authError = throwable.message ?: "No se pudo vincular el correo."
+                        )
                     }
                 }
         }
@@ -183,7 +153,12 @@ class AppViewModel(
                     }
                 }
                 .onFailure { throwable ->
-                    _state.update { it.copy(authError = authErrorMessage(throwable)) }
+                    _state.update {
+                        it.copy(
+                            authError = throwable.message
+                                ?: "No se pudo enviar el correo de recuperación."
+                        )
+                    }
                 }
         }
     }
@@ -199,7 +174,7 @@ class AppViewModel(
                     _state.update {
                         it.copy(
                             authLoading = false,
-                            authError = authErrorMessage(throwable)
+                            authError = throwable.message ?: "Ocurrió un error inesperado."
                         )
                     }
                 }
@@ -215,25 +190,19 @@ class AppViewModel(
         restoreJob = null
         profileRestoredForUid = null
         viewModelScope.launch {
-            val uid = authRepository.currentUserId
-            if (uid != null) {
-                runCatching {
-                    withTimeoutOrNull(3_000) {
-                        val token = FirebaseMessaging.getInstance().token.await()
-                        userRepository.deleteDeviceToken(uid, token)
-                    }
-                }
+            authRepository.currentUserId?.let { uid ->
+                userRepository.unregisterCurrentDevice(uid)
             }
             authRepository.signOut()
-            preferences.clearAll()
-            offlineStore.clearAll()
+            sessionRepository.clear()
+            medicationCacheRepository.clearAll()
             _state.update { AppUiState(loading = false) }
         }
     }
 
     fun selectRole(role: UserRole) {
         viewModelScope.launch {
-            preferences.setRole(role.name)
+            sessionRepository.setRole(role.name)
             authRepository.currentUserId?.let { uid ->
                 runCatching { userRepository.saveRole(uid, role.name) }
             }
@@ -242,53 +211,29 @@ class AppViewModel(
 
     fun completeOnboarding(name: String) {
         viewModelScope.launch {
-            preferences.completeOnboarding(name)
+            sessionRepository.completeOnboarding(name)
             val uid = authRepository.currentUserId ?: return@launch
-            val role = preferences.role.first() ?: return@launch
+            val role = sessionRepository.currentRole() ?: return@launch
             runCatching { userRepository.saveProfile(uid, role, name.trim()) }
         }
     }
 
     fun setBiometricEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            preferences.setBiometricEnabled(enabled)
+            sessionRepository.setBiometricEnabled(enabled)
         }
     }
 
     fun markBiometricAsked() {
         viewModelScope.launch {
-            preferences.markBiometricAsked()
+            sessionRepository.markBiometricAsked()
         }
     }
 
     fun goBackToRoleSelection() {
         viewModelScope.launch {
-            preferences.clearRole()
+            sessionRepository.clearRole()
             _state.update { it.copy(role = null, onboarded = false) }
         }
-    }
-
-    private fun authErrorMessage(throwable: Throwable): String = when (throwable) {
-        is FirebaseAuthWeakPasswordException ->
-            "La contraseña es demasiado débil. Usa al menos 6 caracteres."
-        is FirebaseAuthInvalidCredentialsException ->
-            "Correo o contraseña incorrectos."
-        is FirebaseAuthInvalidUserException ->
-            "No encontramos una cuenta con este correo."
-        is FirebaseAuthUserCollisionException ->
-            "Ese correo ya está registrado. Inicia sesión con él."
-        is FirebaseAuthRecentLoginRequiredException ->
-            "Por seguridad, vuelve a iniciar sesión e inténtalo de nuevo."
-        is FirebaseNetworkException ->
-            "No pudimos conectar. Revisa tu conexión a internet."
-        is FirebaseTooManyRequestsException ->
-            "Demasiados intentos. Espera un momento y vuelve a intentarlo."
-        is FirebaseAuthException ->
-            if (throwable.errorCode == "ERROR_OPERATION_NOT_ALLOWED") {
-                "Este método de inicio de sesión no está habilitado. Revisa la configuración de Firebase."
-            } else {
-                throwable.message ?: "No pudimos completar el inicio de sesión."
-            }
-        else -> throwable.message ?: "Ocurrió un error inesperado."
     }
 }

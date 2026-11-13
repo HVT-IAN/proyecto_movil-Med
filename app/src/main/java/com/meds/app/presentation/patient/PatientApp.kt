@@ -17,22 +17,18 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.google.firebase.messaging.FirebaseMessaging
-import com.meds.app.BuildConfig
-import com.meds.app.MedsApp
 import com.meds.app.di.MedsViewModelFactory
 import com.meds.app.integration.widget.NextDoseWidgetProvider
 import com.meds.app.navigation.PatientNavGraph
 import com.meds.app.navigation.Routes
+import com.meds.app.presentation.patient.companion.PatientCompanionViewModel
 import com.meds.app.presentation.settings.AccountUiState
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.tasks.await
 
 /**
  * Contenedor del módulo paciente.
  *
- * Se encarga de la sesión, los efectos globales (token FCM, tomas del día y
- * widget), los avisos y la barra inferior. Las pantallas y transiciones están
+ * Se encarga de la sesión, los efectos globales (tomas del día y widget),
+ * los avisos y la barra inferior. Las pantallas y transiciones están
  * declaradas en `navigation/PatientNavGraph.kt`.
  */
 @Composable
@@ -56,21 +52,6 @@ fun PatientApp(
     val currentRoute = backStackEntry?.destination?.route
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
-    val userRepository = remember(context) {
-        (context.applicationContext as MedsApp).container.userRepository
-    }
-
-    LaunchedEffect(account.userId) {
-        if (BuildConfig.USE_FIREBASE_EMULATOR) return@LaunchedEffect
-        repeat(3) { attempt ->
-            val saved = runCatching {
-                val token = FirebaseMessaging.getInstance().token.await()
-                userRepository.saveDeviceToken(account.userId, token)
-            }.isSuccess
-            if (saved) return@LaunchedEffect
-            delay(2_000L * (attempt + 1))
-        }
-    }
 
     LaunchedEffect(state.medications, state.schedules, state.loading) {
         if (!state.loading) {

@@ -1,9 +1,7 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.cima
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.meds.app.domain.model.MedicationInfo
-import com.meds.app.domain.model.MedicationInfoDetail
 import com.meds.app.domain.repository.MedicationInfoRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

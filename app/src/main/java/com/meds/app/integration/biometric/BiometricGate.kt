@@ -1,15 +1,9 @@
 package com.meds.app.integration.biometric
 
 import android.app.Activity
-import android.app.KeyguardManager
-import android.content.Context
-import android.content.ContextWrapper
-import android.content.Intent
-import android.os.Build
 import android.os.SystemClock
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -43,94 +37,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.meds.app.core.ui.components.MedsWordmark
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.SecondaryActionButton
+import com.meds.app.core.ui.components.SignOutConfirmDialog
 import com.meds.app.core.ui.components.TextActionButton
 
-private const val ALLOWED_AUTHENTICATORS = BiometricManager.Authenticators.BIOMETRIC_WEAK
 private const val RELOCK_AFTER_MS = 5 * 60 * 1000L
-
-fun isBiometricAvailable(context: Context): Boolean =
-    BiometricManager.from(context)
-        .canAuthenticate(ALLOWED_AUTHENTICATORS) == BiometricManager.BIOMETRIC_SUCCESS
-
-fun isDeviceCredentialAvailable(context: Context): Boolean {
-    val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-    return keyguard?.isDeviceSecure == true
-}
-
-@Suppress("DEPRECATION")
-fun createDeviceCredentialIntent(context: Context): Intent? {
-    val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
-        ?: return null
-    if (!keyguard.isDeviceSecure) return null
-    return keyguard.createConfirmDeviceCredentialIntent(
-        "Confirma que eres tú",
-        "Usa tu PIN, patrón o contraseña para abrir MEDS"
-    )
-}
-
-fun requestBiometricAuthentication(
-    activity: FragmentActivity,
-    title: String,
-    subtitle: String,
-    negativeText: String = "Cancelar",
-    onSuccess: () -> Unit,
-    onFailed: () -> Unit = {},
-    onError: (Int, String) -> Unit
-): BiometricPrompt {
-    val prompt = BiometricPrompt(
-        activity,
-        ContextCompat.getMainExecutor(activity),
-        object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(
-                result: BiometricPrompt.AuthenticationResult
-            ) {
-                onSuccess()
-            }
-
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                onError(errorCode, errString.toString())
-            }
-
-            override fun onAuthenticationFailed() {
-                onFailed()
-            }
-        }
-    )
-
-    val builder = BiometricPrompt.PromptInfo.Builder()
-        .setTitle(title)
-        .setSubtitle(subtitle)
-
-    when {
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> {
-            builder.setAllowedAuthenticators(
-                BiometricManager.Authenticators.BIOMETRIC_WEAK or
-                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
-            )
-        }
-
-        Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q -> {
-            @Suppress("DEPRECATION")
-            builder.setDeviceCredentialAllowed(true)
-        }
-
-        else -> {
-            builder.setAllowedAuthenticators(ALLOWED_AUTHENTICATORS)
-            builder.setNegativeButtonText(negativeText)
-        }
-    }
-
-    prompt.authenticate(builder.build())
-    return prompt
-}
 
 @Composable
 fun BiometricGate(
@@ -247,20 +163,23 @@ fun BiometricGate(
             onError = { code, message ->
                 prompting = false
                 prompt = null
-                when (code) {
-                    BiometricPrompt.ERROR_NEGATIVE_BUTTON -> launchDeviceCredential()
+                error = when (code) {
+                    BiometricPrompt.ERROR_NEGATIVE_BUTTON -> {
+                        launchDeviceCredential()
+                        null
+                    }
                     BiometricPrompt.ERROR_LOCKOUT ->
-                        error = "Demasiados intentos. Espera 30 segundos o usa tu PIN del teléfono."
+                        "Demasiados intentos. Espera 30 segundos o usa tu PIN del teléfono."
                     BiometricPrompt.ERROR_LOCKOUT_PERMANENT ->
-                        error = "La huella está bloqueada. Usa tu PIN del teléfono."
+                        "La huella está bloqueada. Usa tu PIN del teléfono."
                     BiometricPrompt.ERROR_USER_CANCELED ->
-                        error = "Desbloqueo cancelado."
+                        "Desbloqueo cancelado."
                     BiometricPrompt.ERROR_NO_BIOMETRICS ->
-                        error = "No hay huella registrada. Usa tu PIN del teléfono."
+                        "No hay huella registrada. Usa tu PIN del teléfono."
                     BiometricPrompt.ERROR_HW_NOT_PRESENT,
                     BiometricPrompt.ERROR_HW_UNAVAILABLE ->
-                        error = "La biometría no está disponible. Usa tu PIN del teléfono."
-                    else -> error = message
+                        "La biometría no está disponible. Usa tu PIN del teléfono."
+                    else -> message
                 }
             }
         )
@@ -280,8 +199,8 @@ fun BiometricGate(
             canUseBiometrics = canUseBiometrics,
             canUsePin = canUsePin,
             isAnonymous = isAnonymous,
-            onUnlockBiometric = { requestAuthentication() },
-            onUsePin = { launchDeviceCredential() },
+            onUnlockBiometric = ::requestAuthentication,
+            onUsePin = ::launchDeviceCredential,
             onSignOut = onSignOut
         )
     }
@@ -385,34 +304,13 @@ private fun BiometricLockScreen(
     }
 
     if (showSignOutDialog && onSignOut != null) {
-        AlertDialog(
-            onDismissRequest = { showSignOutDialog = false },
-            title = { Text("¿Cerrar sesión?") },
-            text = {
-                Text(
-                    if (isAnonymous) {
-                        "Esta cuenta es anónima. Si cierras sesión, perderás el acceso " +
-                            "a sus datos. Vincula un correo primero si quieres conservarlos."
-                    } else {
-                        "Tendrás que iniciar sesión de nuevo para volver a entrar a MEDS."
-                    }
-                )
+        SignOutConfirmDialog(
+            isAnonymous = isAnonymous,
+            onConfirm = {
+                showSignOutDialog = false
+                onSignOut()
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSignOutDialog = false
-                        onSignOut()
-                    }
-                ) {
-                    Text("Cerrar sesión")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
+            onDismiss = { showSignOutDialog = false }
         )
     }
 }
@@ -442,16 +340,6 @@ fun BiometricOptInDialog(
         onDispose {
             prompt?.cancelAuthentication()
             prompt = null
-        }
-    }
-
-    fun activateWithPin() {
-        val intent = createDeviceCredentialIntent(context)
-        if (intent == null) {
-            error = "No hay PIN, patrón o contraseña configurados en el teléfono."
-        } else {
-            error = null
-            pinLauncher.launch(intent)
         }
     }
 
@@ -493,37 +381,21 @@ fun BiometricOptInDialog(
         confirmButton = {
             TextButton(
                 onClick = {
-                    if (isBiometricAvailable(context) && activity != null) {
-                        prompt = requestBiometricAuthentication(
-                            activity = activity,
-                            title = "Activa el bloqueo",
-                            subtitle = "Confirma con tu huella, rostro o PIN",
-                            onSuccess = {
-                                prompt = null
-                                error = null
-                                onEnable()
-                            },
-                            onFailed = {},
-                            onError = { code, message ->
-                                prompt = null
-                                if (
-                                    code == BiometricPrompt.ERROR_LOCKOUT ||
-                                    code == BiometricPrompt.ERROR_LOCKOUT_PERMANENT
-                                ) {
-                                    activateWithPin()
-                                } else if (
-                                    code != BiometricPrompt.ERROR_NEGATIVE_BUTTON &&
-                                    code != BiometricPrompt.ERROR_USER_CANCELED
-                                ) {
-                                    error = message
-                                }
-                            }
-                        )
-                    } else if (isDeviceCredentialAvailable(context)) {
-                        activateWithPin()
-                    } else {
-                        error = "Configura una huella o un PIN en el teléfono."
-                    }
+                    error = null
+                    prompt = requestSecurityConfirmation(
+                        context = context,
+                        activity = activity,
+                        onLaunchPinIntent = { intent -> pinLauncher.launch(intent) },
+                        onConfirmed = {
+                            prompt = null
+                            error = null
+                            onEnable()
+                        },
+                        onErrorMessage = { message ->
+                            prompt = null
+                            error = message
+                        }
+                    )
                 }
             ) {
                 Text("Activar bloqueo")
@@ -535,13 +407,4 @@ fun BiometricOptInDialog(
             }
         }
     )
-}
-
-fun Context.findFragmentActivity(): FragmentActivity? {
-    var current: Context? = this
-    while (current != null) {
-        if (current is FragmentActivity) return current
-        current = (current as? ContextWrapper)?.baseContext
-    }
-    return null
 }

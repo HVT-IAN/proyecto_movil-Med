@@ -1,4 +1,4 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.companion
 
 import com.meds.app.domain.model.CompanionLink
 import com.meds.app.domain.model.Nudge

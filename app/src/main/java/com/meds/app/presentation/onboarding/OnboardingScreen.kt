@@ -1,12 +1,8 @@
 package com.meds.app.presentation.onboarding
 
 import android.Manifest
-import android.app.AlarmManager
-import android.content.Intent
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -57,6 +53,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.meds.app.domain.model.UserRole
+import com.meds.app.integration.notifications.AlarmScheduler
 import com.meds.app.core.ui.components.InfoRow
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PrimaryActionButton
@@ -82,16 +79,8 @@ fun OnboardingScreen(
     }
 
     val finishAfterPermissions: () -> Unit = {
-        val alarmManager = context.getSystemService(AlarmManager::class.java)
-        val needsExactAlarm = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S &&
-            alarmManager != null &&
-            !alarmManager.canScheduleExactAlarms()
-
-        if (needsExactAlarm) {
-            val intent = Intent(
-                Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                Uri.parse("package:${context.packageName}")
-            )
+        val intent = AlarmScheduler.exactAlarmSettingsIntent(context)
+        if (intent != null) {
             val launched = runCatching { exactAlarmLauncher.launch(intent) }.isSuccess
             if (!launched) {
                 onFinish(name.trim())

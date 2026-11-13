@@ -7,8 +7,8 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.meds.app.MedsApp
 import com.meds.app.presentation.companion.CompanionViewModel
-import com.meds.app.presentation.patient.MedicationInfoViewModel
-import com.meds.app.presentation.patient.PatientCompanionViewModel
+import com.meds.app.presentation.patient.cima.MedicationInfoViewModel
+import com.meds.app.presentation.patient.companion.PatientCompanionViewModel
 import com.meds.app.presentation.patient.PatientViewModel
 import com.meds.app.presentation.root.AppViewModel
 
@@ -26,8 +26,8 @@ val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         AppViewModel(
             authRepository = container.authRepository,
             userRepository = container.userRepository,
-            preferences = container.preferencesStore,
-            offlineStore = container.offlineMedicationStore
+            sessionRepository = container.sessionRepository,
+            medicationCacheRepository = container.medicationCacheRepository
         )
     }
     initializer {
@@ -35,6 +35,7 @@ val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         PatientViewModel(
             repository = container.patientRepository,
             companionRepository = container.companionRepository,
+            userRepository = container.userRepository,
             authRepository = container.authRepository
         )
     }

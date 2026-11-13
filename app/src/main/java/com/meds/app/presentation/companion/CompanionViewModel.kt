@@ -2,24 +2,24 @@ package com.meds.app.presentation.companion
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.firestore.FirebaseFirestoreException
+import com.meds.app.core.common.AccessDeniedException
+import com.meds.app.core.common.periodicTicker
 import com.meds.app.domain.model.CompanionDay
 import com.meds.app.domain.model.LinkedPatient
 import com.meds.app.domain.repository.AuthRepository
 import com.meds.app.domain.repository.CompanionRepository
 import com.meds.app.core.common.todayKey
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.retryWhen
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,10 +42,10 @@ class CompanionViewModel(
 
     init {
         viewModelScope.launch {
-            while (true) {
-                delay(30_000L)
-                currentDate.value = todayKey()
-            }
+            periodicTicker(DATE_CHECK_INTERVAL_MS, initialDelayMillis = 0L)
+                .map { todayKey() }
+                .distinctUntilChanged()
+                .collect { date -> currentDate.value = date }
         }
     }
 
@@ -69,18 +69,6 @@ class CompanionViewModel(
         } else {
             repository.observePatientDay(patient.uid, date)
                 .map<CompanionDay, CompanionDay?> { it }
-                .retryWhen { cause, attempt ->
-                    val permissionDenied = (cause as? FirebaseFirestoreException)?.code ==
-                        FirebaseFirestoreException.Code.PERMISSION_DENIED
-                    if (permissionDenied && attempt < 3) {
-                        // La escritura local del vínculo puede emitirse antes de que
-                        // Firestore confirme el lote y aplique las reglas.
-                        delay(700L * (attempt + 1))
-                        true
-                    } else {
-                        false
-                    }
-                }
                 .catch { throwable ->
                     extras.update { it.copy(error = accessError(throwable)) }
                     emit(null)
@@ -187,11 +175,14 @@ class CompanionViewModel(
     }
 
     private fun accessError(throwable: Throwable): String {
-        val message = throwable.message.orEmpty()
-        return if (message.contains("PERMISSION_DENIED", ignoreCase = true)) {
-            "El acceso a este paciente fue retirado. Puedes desvincularte para volver a empezar."
-        } else {
-            message.ifBlank { "No se pudieron cargar los datos del paciente." }
+        if (throwable is AccessDeniedException) {
+            return "El acceso a este paciente fue retirado. Puedes desvincularte para volver a empezar."
         }
+        val message = throwable.message.orEmpty()
+        return message.ifBlank { "No se pudieron cargar los datos del paciente." }
+    }
+
+    private companion object {
+        const val DATE_CHECK_INTERVAL_MS = 30_000L
     }
 }

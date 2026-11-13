@@ -1,15 +1,20 @@
 package com.meds.app.data.repository
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.QuerySnapshot
 import com.meds.app.domain.model.CompanionLink
 import com.meds.app.domain.model.DoseLog
+import com.meds.app.domain.model.DoseStatus
 import com.meds.app.domain.model.LinkedPatient
 import com.meds.app.domain.model.Medication
+import com.meds.app.domain.model.MedicationDraft
 import com.meds.app.domain.model.Nudge
 import com.meds.app.domain.model.PairingInvite
 import com.meds.app.domain.model.PlantState
 import com.meds.app.domain.model.Schedule
+import java.util.Date
 
 fun DocumentSnapshot.toMedication(): Medication? {
     if (!exists()) return null
@@ -47,7 +52,7 @@ fun DocumentSnapshot.toDoseLog(): DoseLog? {
         dose = getString("dose").orEmpty(),
         scheduledAt = getTimestamp("scheduledAt")?.toDate()?.time ?: 0L,
         takenAt = getTimestamp("takenAt")?.toDate()?.time,
-        status = getString("status") ?: "PENDING",
+        status = getString("status") ?: DoseStatus.PENDING,
         source = getString("source") ?: "APP",
         dateKey = getString("dateKey").orEmpty()
     )
@@ -126,3 +131,54 @@ fun QuerySnapshot.toLinkedPatients(): List<LinkedPatient> =
 
 fun QuerySnapshot.toNudges(): List<Nudge> =
     documents.mapNotNull { it.toNudge() }
+
+internal fun MedicationDraft.toMedicationFirestoreMap(isNew: Boolean): Map<String, Any> =
+    buildMap {
+        put("name", name.trim())
+        put("dose", dose.trim())
+        put("form", form)
+        put("stock", stock)
+        put("active", true)
+        if (isNew) {
+            put("createdAt", FieldValue.serverTimestamp())
+        }
+    }
+
+internal fun MedicationDraft.toScheduleFirestoreMap(medicationId: String): Map<String, Any> =
+    mapOf(
+        "medicationId" to medicationId,
+        "times" to times.distinct().sorted(),
+        "daysMask" to 127,
+        "anchor" to anchor,
+        "enabled" to true
+    )
+
+internal fun PlantState.toFirestoreMap(): Map<String, Any> =
+    mapOf(
+        "level" to level,
+        "xp" to xp,
+        "streak" to streak,
+        "freezeAvailable" to freezeAvailable,
+        "lastTakenDate" to lastTakenDate,
+        "totalTaken" to totalTaken
+    )
+
+internal fun DoseLog.toFirestoreMap(
+    scheduledMillis: Long,
+    statusValue: String,
+    sourceValue: String,
+    dateKeyValue: String,
+    takenTimestamp: Timestamp? = null
+): Map<String, Any> = buildMap {
+    put("medicationId", medicationId)
+    put("scheduleId", scheduleId)
+    put("medicationName", medicationName)
+    put("dose", dose)
+    put("scheduledAt", Timestamp(Date(scheduledMillis)))
+    if (takenTimestamp != null) {
+        put("takenAt", takenTimestamp)
+    }
+    put("status", statusValue)
+    put("source", sourceValue)
+    put("dateKey", dateKeyValue)
+}

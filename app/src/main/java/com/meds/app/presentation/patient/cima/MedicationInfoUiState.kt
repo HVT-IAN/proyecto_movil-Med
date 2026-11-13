@@ -1,4 +1,4 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.cima
 
 import com.meds.app.domain.model.MedicationInfo
 import com.meds.app.domain.model.MedicationInfoDetail

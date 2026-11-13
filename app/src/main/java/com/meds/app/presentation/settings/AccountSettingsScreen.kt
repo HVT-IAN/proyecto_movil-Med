@@ -3,7 +3,6 @@ package com.meds.app.presentation.settings
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.biometric.BiometricPrompt
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -20,30 +19,22 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.CheckCircle
-import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Link
-import androidx.compose.material.icons.outlined.Lock
-import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material.icons.outlined.WarningAmber
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -54,23 +45,19 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.meds.app.BuildConfig
-import com.meds.app.domain.model.UserRole
 import com.meds.app.core.ui.components.InfoRow
 import com.meds.app.core.ui.components.LabelValue
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.SectionLabel
-import com.meds.app.integration.biometric.createDeviceCredentialIntent
-import com.meds.app.integration.biometric.findFragmentActivity
-import com.meds.app.integration.biometric.requestBiometricAuthentication
+import com.meds.app.core.ui.components.SignOutConfirmDialog
 import com.meds.app.core.ui.theme.LocalMedsColors
+import com.meds.app.domain.model.UserRole
+import com.meds.app.integration.biometric.findFragmentActivity
+import com.meds.app.integration.biometric.requestSecurityConfirmation
 
 @Composable
 fun AccountSettingsScreen(
@@ -99,10 +86,6 @@ fun AccountSettingsScreen(
 
     var showLinkDialog by rememberSaveable { mutableStateOf(false) }
     var showSignOutDialog by rememberSaveable { mutableStateOf(false) }
-    var linkEmail by rememberSaveable { mutableStateOf("") }
-    var linkPassword by rememberSaveable { mutableStateOf("") }
-    var linkConfirmPassword by rememberSaveable { mutableStateOf("") }
-    var linkPasswordVisible by rememberSaveable { mutableStateOf(false) }
 
     val context = LocalContext.current
     val activity = remember(context) { context.findFragmentActivity() }
@@ -118,11 +101,6 @@ fun AccountSettingsScreen(
             biometricError = "No se confirmó el PIN. Intenta de nuevo."
         }
     }
-
-    val emailValid = isValidEmail(linkEmail)
-    val passwordValid = linkPassword.length >= 6
-    val passwordsMatch = linkConfirmPassword == linkPassword
-    val canLink = emailValid && passwordValid && passwordsMatch && !account.authLoading
 
     LaunchedEffect(account.isAnonymous) {
         if (!account.isAnonymous) {
@@ -239,9 +217,6 @@ fun AccountSettingsScreen(
                         text = "Vincular correo electrónico",
                         onClick = {
                             onClearAuthMessages()
-                            linkEmail = ""
-                            linkPassword = ""
-                            linkConfirmPassword = ""
                             showLinkDialog = true
                         },
                         enabled = !account.authLoading,
@@ -317,46 +292,15 @@ fun AccountSettingsScreen(
                             if (!checked) {
                                 onBiometricChange(false)
                             } else {
-                                val currentActivity = activity
-                                if (account.biometricAvailable && currentActivity != null) {
-                                    requestBiometricAuthentication(
-                                        activity = currentActivity,
-                                        title = "Activa el bloqueo",
-                                        subtitle = "Confirma con huella, rostro o PIN",
-                                        onSuccess = { onBiometricChange(true) },
-                                        onFailed = {},
-                                        onError = { code, message ->
-                                            if (
-                                                code == BiometricPrompt.ERROR_LOCKOUT ||
-                                                code == BiometricPrompt.ERROR_LOCKOUT_PERMANENT
-                                            ) {
-                                                val intent = createDeviceCredentialIntent(context)
-                                                if (intent != null) {
-                                                    pinLauncher.launch(intent)
-                                                } else {
-                                                    biometricError =
-                                                        "No hay PIN configurado. Espera 30 segundos."
-                                                }
-                                            } else if (
-                                                code != BiometricPrompt.ERROR_NEGATIVE_BUTTON &&
-                                                code != BiometricPrompt.ERROR_USER_CANCELED
-                                            ) {
-                                                biometricError = message
-                                            }
-                                        }
-                                    )
-                                } else if (account.deviceCredentialAvailable) {
-                                    val intent = createDeviceCredentialIntent(context)
-                                    if (intent != null) {
-                                        pinLauncher.launch(intent)
-                                    } else {
-                                        biometricError =
-                                            "No se pudo abrir la pantalla del PIN."
-                                    }
-                                } else {
-                                    biometricError =
-                                        "Configura una huella o un PIN en el teléfono."
-                                }
+                                requestSecurityConfirmation(
+                                    context = context,
+                                    activity = activity,
+                                    biometricAvailable = account.biometricAvailable,
+                                    deviceCredentialAvailable = account.deviceCredentialAvailable,
+                                    onLaunchPinIntent = { intent -> pinLauncher.launch(intent) },
+                                    onConfirmed = { onBiometricChange(true) },
+                                    onErrorMessage = { message -> biometricError = message }
+                                )
                             }
                         }
                     )
@@ -428,194 +372,25 @@ fun AccountSettingsScreen(
     }
 
     if (showLinkDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                if (!account.authLoading) {
-                    showLinkDialog = false
-                    onClearAuthMessages()
-                }
-            },
-            title = { Text("Vincular correo electrónico") },
-            text = {
-                Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
-                    Text(
-                        text = "Tu cuenta anónima pasará a tener acceso con correo y contraseña. " +
-                            "Conservarás todos tus datos actuales.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    OutlinedTextField(
-                        value = linkEmail,
-                        onValueChange = { linkEmail = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Correo electrónico") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Email,
-                                contentDescription = null
-                            )
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        isError = linkEmail.isNotBlank() && !emailValid,
-                        supportingText = if (linkEmail.isNotBlank() && !emailValid) {
-                            { Text("Escribe un correo válido.") }
-                        } else {
-                            null
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next
-                        )
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = linkPassword,
-                        onValueChange = { linkPassword = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Contraseña") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Lock,
-                                contentDescription = null
-                            )
-                        },
-                        trailingIcon = {
-                            IconButton(onClick = { linkPasswordVisible = !linkPasswordVisible }) {
-                                Icon(
-                                    imageVector = if (linkPasswordVisible) {
-                                        Icons.Outlined.VisibilityOff
-                                    } else {
-                                        Icons.Outlined.Visibility
-                                    },
-                                    contentDescription = if (linkPasswordVisible) {
-                                        "Ocultar contraseña"
-                                    } else {
-                                        "Mostrar contraseña"
-                                    }
-                                )
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        visualTransformation = if (linkPasswordVisible) {
-                            VisualTransformation.None
-                        } else {
-                            PasswordVisualTransformation()
-                        },
-                        isError = linkPassword.isNotBlank() && !passwordValid,
-                        supportingText = if (linkPassword.isNotBlank() && !passwordValid) {
-                            { Text("Usa al menos 6 caracteres.") }
-                        } else {
-                            null
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Next
-                        )
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    OutlinedTextField(
-                        value = linkConfirmPassword,
-                        onValueChange = { linkConfirmPassword = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Confirmar contraseña") },
-                        leadingIcon = {
-                            Icon(
-                                imageVector = Icons.Outlined.Lock,
-                                contentDescription = null
-                            )
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        visualTransformation = if (linkPasswordVisible) {
-                            VisualTransformation.None
-                        } else {
-                            PasswordVisualTransformation()
-                        },
-                        isError = linkConfirmPassword.isNotBlank() && !passwordsMatch,
-                        supportingText = if (linkConfirmPassword.isNotBlank() && !passwordsMatch) {
-                            { Text("Las contraseñas no coinciden.") }
-                        } else {
-                            null
-                        },
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Password,
-                            imeAction = ImeAction.Done
-                        )
-                    )
-                    if (account.authError != null) {
-                        Spacer(Modifier.height(12.dp))
-                        Text(
-                            text = account.authError,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = { onLinkEmail(linkEmail.trim(), linkPassword) },
-                    enabled = canLink
-                ) {
-                    Text(if (account.authLoading) "Vinculando..." else "Vincular")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showLinkDialog = false
-                        onClearAuthMessages()
-                    },
-                    enabled = !account.authLoading
-                ) {
-                    Text("Cancelar")
-                }
+        LinkEmailDialog(
+            authLoading = account.authLoading,
+            authError = account.authError,
+            onLinkEmail = onLinkEmail,
+            onDismiss = {
+                showLinkDialog = false
+                onClearAuthMessages()
             }
         )
     }
 
     if (showSignOutDialog) {
-        AlertDialog(
-            onDismissRequest = { showSignOutDialog = false },
-            title = { Text("¿Cerrar sesión?") },
-            text = {
-                Text(
-                    if (account.isAnonymous) {
-                        "Esta cuenta es anónima. Si cierras sesión, no podrás volver a " +
-                            "acceder a tus medicamentos ni a tu historial. " +
-                            "Te recomendamos vincular un correo primero."
-                    } else {
-                        "Podrás volver a entrar cuando quieras con tu correo y contraseña."
-                    }
-                )
+        SignOutConfirmDialog(
+            isAnonymous = account.isAnonymous,
+            onConfirm = {
+                showSignOutDialog = false
+                onSignOut()
             },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        showSignOutDialog = false
-                        onSignOut()
-                    }
-                ) {
-                    Text(
-                        text = "Cerrar sesión",
-                        color = MaterialTheme.colorScheme.error
-                    )
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showSignOutDialog = false }) {
-                    Text("Cancelar")
-                }
-            }
+            onDismiss = { showSignOutDialog = false }
         )
     }
-}
-
-private fun isValidEmail(value: String): Boolean {
-    val trimmed = value.trim()
-    if (trimmed.isEmpty()) return false
-    return Regex("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$").matches(trimmed)
 }

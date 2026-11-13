@@ -1,4 +1,4 @@
-package com.meds.app.presentation.patient
+package com.meds.app.presentation.patient.medications
 
 import android.app.TimePickerDialog
 import androidx.compose.foundation.horizontalScroll
@@ -46,14 +46,15 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.meds.app.domain.model.Medication
-import com.meds.app.domain.model.MedicationDraft
-import com.meds.app.domain.model.Schedule
+import com.meds.app.core.common.formatTimeOfDay
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.SectionLabel
 import com.meds.app.core.ui.components.TextActionButton
-import com.meds.app.core.common.formatTimeOfDay
+import com.meds.app.domain.model.Medication
+import com.meds.app.domain.model.MedicationDraft
+import com.meds.app.domain.model.Schedule
+import com.meds.app.presentation.patient.PatientViewModel
 import java.time.LocalTime
 import java.util.Locale
 
