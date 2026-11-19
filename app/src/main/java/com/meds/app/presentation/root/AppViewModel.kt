@@ -25,6 +25,7 @@ class AppViewModel(
     val state: StateFlow<AppUiState> = _state.asStateFlow()
     private var profileRestoredForUid: String? = null
     private var restoreJob: Job? = null
+    private var tutorialJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -32,6 +33,8 @@ class AppViewModel(
                 if (user == null) {
                     restoreJob?.cancel()
                     restoreJob = null
+                    tutorialJob?.cancel()
+                    tutorialJob = null
                     profileRestoredForUid = null
                     _state.update {
                         it.copy(
@@ -39,7 +42,9 @@ class AppViewModel(
                             userId = null,
                             email = null,
                             isAnonymous = false,
-                            authLoading = false
+                            authLoading = false,
+                            tutorialSeen = false,
+                            tutorialLoaded = false
                         )
                     }
                 } else {
@@ -51,10 +56,13 @@ class AppViewModel(
                             email = user.email,
                             isAnonymous = user.isAnonymous,
                             authLoading = false,
-                            authError = null
+                            authError = null,
+                            tutorialSeen = if (alreadySignedIn) it.tutorialSeen else false,
+                            tutorialLoaded = if (alreadySignedIn) it.tutorialLoaded else false
                         )
                     }
                     restoreProfileIfNeeded(user.uid)
+                    observeTutorial(user.uid)
                 }
             }
         }
@@ -100,6 +108,25 @@ class AppViewModel(
             } else {
                 _state.update { it.copy(loading = false) }
             }
+        }
+    }
+
+    private fun observeTutorial(uid: String) {
+        tutorialJob?.cancel()
+        tutorialJob = viewModelScope.launch {
+            sessionRepository.tutorialSeen(uid).collect { seen ->
+                _state.update {
+                    it.copy(tutorialSeen = seen, tutorialLoaded = true)
+                }
+            }
+        }
+    }
+
+    fun markTutorialSeen() {
+        val uid = _state.value.userId ?: return
+        _state.update { it.copy(tutorialSeen = true) }
+        viewModelScope.launch {
+            sessionRepository.markTutorialSeen(uid)
         }
     }
 
@@ -188,6 +215,8 @@ class AppViewModel(
     fun signOut() {
         restoreJob?.cancel()
         restoreJob = null
+        tutorialJob?.cancel()
+        tutorialJob = null
         profileRestoredForUid = null
         viewModelScope.launch {
             authRepository.currentUserId?.let { uid ->

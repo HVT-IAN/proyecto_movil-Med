@@ -27,7 +27,7 @@ object Routes {
 
         const val RESULT_SELECTED_MEDICATION_NAME = "selected_medication_name"
 
-        val topLevelDestinations = setOf(HOME, MEDICATIONS, GARDEN, SETTINGS)
+        val topLevelDestinations = setOf(HOME, MEDICATIONS, SETTINGS)
 
         fun medicationEditor(medicationId: String): String =
             "medication_editor/${Uri.encode(medicationId)}"

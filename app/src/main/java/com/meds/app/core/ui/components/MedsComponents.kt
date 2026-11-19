@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -91,16 +92,22 @@ fun SecondaryActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    fillWidth: Boolean = true
 ) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp),
+            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+            .heightIn(min = if (fillWidth) 56.dp else 48.dp),
         enabled = enabled,
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        shape = RoundedCornerShape(if (fillWidth) 18.dp else 16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        contentPadding = if (fillWidth) {
+            ButtonDefaults.ContentPadding
+        } else {
+            PaddingValues(horizontal = 20.dp)
+        }
     ) {
         if (icon != null) {
             Icon(
@@ -121,9 +128,18 @@ fun SecondaryActionButton(
 fun TextActionButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
-    TextButton(onClick = onClick, modifier = modifier) {
+    TextButton(
+        onClick = onClick,
+        modifier = modifier.then(if (compact) Modifier.heightIn(min = 40.dp) else Modifier),
+        contentPadding = if (compact) {
+            PaddingValues(horizontal = 12.dp)
+        } else {
+            ButtonDefaults.TextButtonContentPadding
+        }
+    ) {
         Text(text = text, style = MaterialTheme.typography.labelLarge)
     }
 }

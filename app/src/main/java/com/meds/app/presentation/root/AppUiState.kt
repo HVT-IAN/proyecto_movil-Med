@@ -11,6 +11,8 @@ data class AppUiState(
     val role: UserRole? = null,
     val name: String = "",
     val onboarded: Boolean = false,
+    val tutorialSeen: Boolean = false,
+    val tutorialLoaded: Boolean = false,
     val biometricEnabled: Boolean = false,
     val biometricAsked: Boolean = false,
     val authLoading: Boolean = false,

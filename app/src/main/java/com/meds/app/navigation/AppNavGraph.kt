@@ -145,6 +145,9 @@ fun AppNavGraph(
                 } else if (role == UserRole.PATIENT) {
                     PatientApp(
                         account = account,
+                        tutorialSeen = state.tutorialSeen,
+                        tutorialLoaded = state.tutorialLoaded,
+                        onTutorialSeen = viewModel::markTutorialSeen,
                         onLinkEmail = viewModel::linkEmail,
                         onSignOut = viewModel::signOut,
                         onClearAuthMessages = viewModel::clearAuthMessages,
