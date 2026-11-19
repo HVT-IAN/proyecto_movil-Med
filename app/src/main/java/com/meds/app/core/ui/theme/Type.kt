@@ -34,51 +34,48 @@ val Manrope = FontFamily(
     )
 )
 
-val Fraunces = FontFamily(
+val LemonMilk = FontFamily(
     Font(
-        resId = R.font.fraunces,
-        weight = FontWeight.Medium,
-        variationSettings = FontVariation.Settings(FontVariation.weight(500))
-    ),
-    Font(
-        resId = R.font.fraunces,
-        weight = FontWeight.SemiBold,
-        variationSettings = FontVariation.Settings(FontVariation.weight(600))
+        resId = R.font.lemon_milk_bold,
+        weight = FontWeight.Bold
     )
 )
 
 val MedsTypography = Typography(
     displayLarge = TextStyle(
-        fontFamily = Fraunces,
+        fontFamily = Manrope,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 44.sp,
-        lineHeight = 50.sp,
-        letterSpacing = (-0.5).sp
+        fontSize = 40.sp,
+        lineHeight = 46.sp,
+        letterSpacing = (-0.6).sp
     ),
     displayMedium = TextStyle(
-        fontFamily = Fraunces,
+        fontFamily = Manrope,
         fontWeight = FontWeight.SemiBold,
-        fontSize = 36.sp,
-        lineHeight = 42.sp,
-        letterSpacing = (-0.3).sp
+        fontSize = 34.sp,
+        lineHeight = 40.sp,
+        letterSpacing = (-0.4).sp
     ),
     displaySmall = TextStyle(
-        fontFamily = Fraunces,
-        fontWeight = FontWeight.Medium,
-        fontSize = 30.sp,
-        lineHeight = 36.sp
-    ),
-    headlineLarge = TextStyle(
-        fontFamily = Fraunces,
+        fontFamily = Manrope,
         fontWeight = FontWeight.SemiBold,
         fontSize = 28.sp,
-        lineHeight = 34.sp
+        lineHeight = 34.sp,
+        letterSpacing = (-0.2).sp
+    ),
+    headlineLarge = TextStyle(
+        fontFamily = Manrope,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 26.sp,
+        lineHeight = 32.sp,
+        letterSpacing = (-0.3).sp
     ),
     headlineMedium = TextStyle(
-        fontFamily = Fraunces,
-        fontWeight = FontWeight.Medium,
-        fontSize = 24.sp,
-        lineHeight = 30.sp
+        fontFamily = Manrope,
+        fontWeight = FontWeight.SemiBold,
+        fontSize = 22.sp,
+        lineHeight = 28.sp,
+        letterSpacing = (-0.2).sp
     ),
     headlineSmall = TextStyle(
         fontFamily = Manrope,
