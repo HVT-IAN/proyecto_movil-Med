@@ -22,10 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -45,14 +41,13 @@ import com.meds.app.domain.model.PlantState
 /**
  * Jardín.
  *
- * Pantalla secundaria: se abre desde Hoy y vuelve con la flecha. La planta
- * se mece suavemente y el progreso se anima al entrar. No hay partículas ni
- * celebraciones que interrumpan la lectura.
+ * Una de las cuatro pestañas principales. La planta se mece suavemente y el
+ * progreso se anima al entrar. No hay partículas ni celebraciones que
+ * interrumpan la lectura.
  */
 @Composable
 fun GardenScreen(
-    plant: PlantState,
-    onBack: () -> Unit
+    plant: PlantState
 ) {
     val stage = plant.stage
     val isMaxLevel = plant.isMaxLevel
@@ -86,30 +81,17 @@ fun GardenScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 12.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                    contentDescription = "Volver",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            Spacer(Modifier.size(4.dp))
-            Column {
-                Text(
-                    text = "Jardín",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Text(
-                    text = "Tu constancia, hoja a hoja.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        Column {
+            Text(
+                text = "Jardín",
+                style = MaterialTheme.typography.headlineMedium,
+                color = MaterialTheme.colorScheme.onBackground
+            )
+            Text(
+                text = "Tu constancia, hoja a hoja.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
 
         Spacer(Modifier.height(16.dp))

@@ -44,13 +44,11 @@ import com.meds.app.core.common.relativeTime
 import com.meds.app.core.common.todayKey
 import com.meds.app.core.ui.components.DoseLogRow
 import com.meds.app.core.ui.components.MedsCard
-import com.meds.app.core.ui.components.PlantArt
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.SectionLabel
 import com.meds.app.core.ui.components.TextActionButton
 import com.meds.app.core.ui.theme.LocalMedsColors
 import com.meds.app.domain.model.DoseLog
-import com.meds.app.domain.model.PlantState
 import com.meds.app.presentation.patient.PatientUiState
 import kotlinx.coroutines.delay
 
@@ -72,7 +70,6 @@ fun HomeScreen(
     onSnoozeDose: (DoseLog) -> Unit,
     onViewAll: () -> Unit,
     onOpenCompanions: () -> Unit,
-    onOpenGarden: () -> Unit,
     onMarkNudgeRead: (String) -> Unit
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -91,8 +88,6 @@ fun HomeScreen(
     val totalCount = state.totalCount
     val isLate = nextDose != null && nextDose.scheduledAt <= now
     val latestNudge = state.latestUnreadNudge
-    val gardenSubtitle =
-        "Etapa ${state.plant.stage} de ${PlantState.MAX_LEVEL}"
 
     Column(
         modifier = Modifier
@@ -266,39 +261,6 @@ fun HomeScreen(
                         compact = true
                     )
                 }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-
-        MedsCard(
-            modifier = Modifier.clickable(role = Role.Button, onClick = onOpenGarden)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PlantArt(
-                    stage = state.plant.stage,
-                    modifier = Modifier.size(36.dp)
-                )
-                Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Tu jardín",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = gardenSubtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
-                )
             }
         }
 

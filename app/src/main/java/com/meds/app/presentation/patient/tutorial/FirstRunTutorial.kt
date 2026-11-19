@@ -10,9 +10,12 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Eco
+import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.Settings
@@ -34,8 +37,8 @@ import com.meds.app.core.ui.components.TextActionButton
 /**
  * Guía breve de primera vez.
  *
- * Una sola hoja, sin carrusel. Explica los tres destinos fijos y dónde viven
- * Jardín e historial. Se puede cerrar deslizando, con "Saltar" o con
+ * Una sola hoja, sin carrusel. Explica los cuatro destinos fijos y dónde vive
+ * el historial. Se puede cerrar deslizando, con "Saltar" o con
  * "Empezar"; en Ajustes hay un acceso para volver a verla.
  */
 @Composable
@@ -53,6 +56,7 @@ fun FirstRunTutorial(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
                 .padding(bottom = 32.dp)
         ) {
@@ -68,7 +72,7 @@ fun FirstRunTutorial(
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "Tres lugares y todo lo demás a la vista.",
+                        text = "Cuatro lugares y todo lo demás a la vista.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -94,6 +98,12 @@ fun FirstRunTutorial(
             )
             Spacer(Modifier.height(18.dp))
             TutorialRow(
+                icon = Icons.Outlined.Eco,
+                title = "Jardín",
+                message = "Tu constancia, hoja a hoja."
+            )
+            Spacer(Modifier.height(18.dp))
+            TutorialRow(
                 icon = Icons.Outlined.Settings,
                 title = "Ajustes",
                 message = "Cuenta, seguridad y acompañante."
@@ -112,14 +122,14 @@ fun FirstRunTutorial(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Outlined.Eco,
+                        imageVector = Icons.Outlined.History,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(18.dp)
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        text = "Jardín e historial están dentro de Hoy.",
+                        text = "El historial está dentro de Hoy.",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

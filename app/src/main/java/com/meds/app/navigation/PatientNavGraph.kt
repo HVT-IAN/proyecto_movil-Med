@@ -87,9 +87,6 @@ fun PatientNavGraph(
                 onOpenCompanions = {
                     navController.navigate(Routes.Patient.COMPANIONS)
                 },
-                onOpenGarden = {
-                    navController.navigate(Routes.Patient.GARDEN)
-                },
                 onMarkNudgeRead = patientViewModel::markNudgeRead
             )
         }
@@ -108,8 +105,7 @@ fun PatientNavGraph(
 
         composable(Routes.Patient.GARDEN) {
             GardenScreen(
-                plant = state.plant,
-                onBack = { navController.popBackStack() }
+                plant = state.plant
             )
         }
 
