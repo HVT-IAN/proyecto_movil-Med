@@ -51,6 +51,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.meds.app.domain.model.UserRole
 import com.meds.app.integration.notifications.AlarmScheduler
@@ -58,7 +59,7 @@ import com.meds.app.core.ui.components.InfoRow
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.TextActionButton
-import com.meds.app.core.ui.theme.Fraunces
+import com.meds.app.core.ui.theme.LemonMilk
 import com.meds.app.core.ui.theme.LocalMedsColors
 
 @Composable
@@ -135,7 +136,11 @@ fun OnboardingScreen(
                 }
                 Text(
                     text = "MEDs",
-                    style = MaterialTheme.typography.headlineMedium.copy(fontFamily = Fraunces),
+                    style = MaterialTheme.typography.headlineMedium.copy(
+                        fontFamily = LemonMilk,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp
+                    ),
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(start = if (step == 1) 0.dp else 4.dp)
                 )

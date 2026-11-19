@@ -21,5 +21,9 @@ interface SessionRepository {
 
     suspend fun markBiometricAsked()
 
+    fun tutorialSeen(uid: String): Flow<Boolean>
+
+    suspend fun markTutorialSeen(uid: String)
+
     suspend fun clear()
 }

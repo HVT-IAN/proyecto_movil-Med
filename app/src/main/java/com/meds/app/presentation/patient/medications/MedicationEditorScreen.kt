@@ -1,9 +1,11 @@
 package com.meds.app.presentation.patient.medications
 
 import android.app.TimePickerDialog
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,15 +23,18 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,8 +54,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.meds.app.core.common.formatTimeOfDay
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PrimaryActionButton
+import com.meds.app.core.ui.components.SecondaryActionButton
 import com.meds.app.core.ui.components.SectionLabel
-import com.meds.app.core.ui.components.TextActionButton
 import com.meds.app.domain.model.Medication
 import com.meds.app.domain.model.MedicationDraft
 import com.meds.app.domain.model.Schedule
@@ -61,6 +66,14 @@ import java.util.Locale
 private val formOptions = listOf("Tableta", "Cápsula", "Jarabe", "Inyección", "Otra")
 private val routineOptions = listOf("Sin rutina", "Desayuno", "Comida", "Cena", "Al acostarme")
 
+/**
+ * Editor de medicamentos.
+ *
+ * El formulario está dividido en cuatro pasos visibles y el botón de guardar
+ * permanece fijo abajo, para no tener que buscarlo al final del scroll. Las
+ * opciones se muestran completas en varias líneas en lugar de esconderse en
+ * un carrusel horizontal.
+ */
 @Composable
 fun MedicationEditorScreen(
     viewModel: PatientViewModel,
@@ -114,13 +127,47 @@ fun MedicationEditorScreen(
         ).show()
     }
 
-    Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
+    val missing = buildList {
+        if (name.isBlank()) add("nombre")
+        if (dose.isBlank()) add("dosis")
+        if (times.isEmpty()) add("una hora")
+    }
+    val canSave = missing.isEmpty() && !state.saving
+    val isNew = medication == null
+
+    val saveMedication: () -> Unit = {
+        viewModel.saveMedication(
+            MedicationDraft(
+                id = medication?.id,
+                scheduleId = schedule?.id,
+                name = name,
+                dose = dose,
+                form = form,
+                times = times,
+                stock = stockText.toIntOrNull() ?: 0,
+                anchor = anchor
+            )
+        )
+    }
+
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        bottomBar = {
+            EditorSaveBar(
+                saving = state.saving,
+                isNew = isNew,
+                missing = missing,
+                canSave = canSave,
+                onSave = saveMedication
+            )
+        }
+    ) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 16.dp)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -134,25 +181,24 @@ fun MedicationEditorScreen(
                     )
                 }
                 Spacer(Modifier.width(4.dp))
-                Text(
-                    text = if (medication == null) "Nuevo medicamento" else "Editar medicamento",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
+                Column {
+                    Text(
+                        text = if (isNew) "Nuevo medicamento" else "Editar medicamento",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Text(
+                        text = "Un horario claro ayuda a sostener el hábito.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
-
-            Spacer(Modifier.height(8.dp))
-            Text(
-                text = "Un horario claro ayuda a sostener el hábito.",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 4.dp)
-            )
 
             Spacer(Modifier.height(20.dp))
 
             MedsCard {
-                SectionLabel(text = "Información")
+                SectionLabel(text = "1. Medicamento")
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = name,
@@ -161,17 +207,20 @@ fun MedicationEditorScreen(
                     label = { Text("Nombre") },
                     placeholder = { Text("Ej. Metilfenidato") },
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
+                    shape = RoundedCornerShape(14.dp),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                    trailingIcon = {
+                        IconButton(onClick = { onOpenInfo(name) }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Info,
+                                contentDescription = "Consultar en CIMA"
+                            )
+                        }
+                    }
                 )
-                Spacer(Modifier.height(4.dp))
-                TextActionButton(
-                    text = "Consultar medicamento",
-                    onClick = { onOpenInfo(name) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = "Busca información oficial de la CIMA/AEMPS.",
+                    text = "Toca el icono para buscar información oficial en CIMA/AEMPS.",
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -183,36 +232,39 @@ fun MedicationEditorScreen(
                     label = { Text("Dosis") },
                     placeholder = { Text("Ej. 18 mg") },
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
                 )
-            }
-
-            Spacer(Modifier.height(14.dp))
-
-            MedsCard {
-                SectionLabel(text = "Forma")
-                Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    text = "Forma",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     formOptions.forEach { option ->
                         FilterChip(
                             selected = form == option,
                             onClick = { form = option },
-                            label = { Text(option) }
+                            label = { Text(option) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             MedsCard {
-                SectionLabel(text = "Horario")
+                SectionLabel(text = "2. Horario")
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = "Añade una o varias horas.",
@@ -228,11 +280,10 @@ fun MedicationEditorScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 } else {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         times.forEach { time ->
                             AssistChip(
@@ -251,24 +302,18 @@ fun MedicationEditorScreen(
                 }
 
                 Spacer(Modifier.height(14.dp))
-                OutlinedButton(
+                SecondaryActionButton(
+                    text = "Agregar hora",
                     onClick = openTimePicker,
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Add,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text("Agregar hora")
-                }
+                    icon = Icons.Outlined.Add,
+                    fillWidth = false
+                )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             MedsCard {
-                SectionLabel(text = "Rutina")
+                SectionLabel(text = "3. Rutina")
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = "¿Qué sueles hacer a esa hora?",
@@ -276,26 +321,29 @@ fun MedicationEditorScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
                 Spacer(Modifier.height(12.dp))
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                FlowRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     routineOptions.forEach { option ->
                         FilterChip(
                             selected = anchor == option,
                             onClick = { anchor = option },
-                            label = { Text(option) }
+                            label = { Text(option) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                                selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             MedsCard {
-                SectionLabel(text = "Inventario")
+                SectionLabel(text = "4. Inventario")
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = stockText,
@@ -305,7 +353,7 @@ fun MedicationEditorScreen(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Unidades disponibles (opcional)") },
                     singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(14.dp),
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
                         imeAction = ImeAction.Done
@@ -319,42 +367,27 @@ fun MedicationEditorScreen(
                 )
             }
 
-            Spacer(Modifier.height(24.dp))
-
-            PrimaryActionButton(
-                text = if (state.saving) "Guardando..." else if (medication == null) {
-                    "Guardar medicamento"
-                } else {
-                    "Guardar cambios"
-                },
-                onClick = {
-                    viewModel.saveMedication(
-                        MedicationDraft(
-                            id = medication?.id,
-                            scheduleId = schedule?.id,
-                            name = name,
-                            dose = dose,
-                            form = form,
-                            times = times,
-                            stock = stockText.toIntOrNull() ?: 0,
-                            anchor = anchor
-                        )
-                    )
-                },
-                enabled = name.isNotBlank() &&
-                    dose.isNotBlank() &&
-                    times.isNotEmpty() &&
-                    !state.saving,
-                icon = Icons.Outlined.Check
-            )
-
             if (medication != null) {
-                Spacer(Modifier.height(10.dp))
-                TextActionButton(
-                    text = "Eliminar medicamento",
-                    onClick = { showDeleteDialog = true },
-                    modifier = Modifier.fillMaxWidth()
+                Spacer(Modifier.height(20.dp))
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 1.dp
                 )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    TextButton(
+                        onClick = { showDeleteDialog = true },
+                        contentPadding = PaddingValues(horizontal = 16.dp)
+                    ) {
+                        Text(
+                            text = "Eliminar medicamento",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(24.dp))
@@ -387,5 +420,50 @@ fun MedicationEditorScreen(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun EditorSaveBar(
+    saving: Boolean,
+    isNew: Boolean,
+    missing: List<String>,
+    canSave: Boolean,
+    onSave: () -> Unit
+) {
+    Surface(
+        color = MaterialTheme.colorScheme.surface,
+        tonalElevation = 0.dp
+    ) {
+        Column {
+            HorizontalDivider(
+                color = MaterialTheme.colorScheme.outlineVariant,
+                thickness = 1.dp
+            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+            ) {
+                if (missing.isNotEmpty() && !saving) {
+                    Text(
+                        text = "Falta: ${missing.joinToString(", ")}.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(6.dp))
+                }
+                PrimaryActionButton(
+                    text = when {
+                        saving -> "Guardando..."
+                        isNew -> "Guardar medicamento"
+                        else -> "Guardar cambios"
+                    },
+                    onClick = onSave,
+                    enabled = canSave,
+                    icon = Icons.Outlined.Check
+                )
+            }
+        }
     }
 }

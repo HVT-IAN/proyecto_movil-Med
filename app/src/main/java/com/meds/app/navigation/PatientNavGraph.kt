@@ -1,5 +1,8 @@
 package com.meds.app.navigation
 
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -14,6 +17,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.meds.app.core.ui.theme.calma.CalmaMotion
 import com.meds.app.presentation.patient.cima.MedicationInfoScreen
 import com.meds.app.presentation.patient.companion.PatientCompanionScreen
 import com.meds.app.presentation.patient.companion.PatientCompanionViewModel
@@ -40,6 +44,9 @@ fun PatientNavGraph(
     state: PatientUiState,
     patientViewModel: PatientViewModel,
     companionViewModel: PatientCompanionViewModel,
+    hasCompanion: Boolean,
+    companionsLoading: Boolean,
+    onShowTutorial: () -> Unit,
     onLinkEmail: (String, String) -> Unit,
     onSignOut: () -> Unit,
     onClearAuthMessages: () -> Unit,
@@ -49,12 +56,26 @@ fun PatientNavGraph(
     NavHost(
         navController = navController,
         startDestination = Routes.Patient.HOME,
-        modifier = modifier
+        modifier = modifier,
+        enterTransition = {
+            fadeIn(tween(CalmaMotion.NAV_FADE_MILLIS))
+        },
+        exitTransition = {
+            fadeOut(tween(CalmaMotion.NAV_FADE_MILLIS))
+        },
+        popEnterTransition = {
+            fadeIn(tween(CalmaMotion.NAV_FADE_MILLIS))
+        },
+        popExitTransition = {
+            fadeOut(tween(CalmaMotion.NAV_FADE_MILLIS))
+        }
     ) {
         composable(Routes.Patient.HOME) {
             HomeScreen(
                 name = account.name,
                 state = state,
+                hasCompanion = hasCompanion,
+                companionsLoading = companionsLoading,
                 onAddMedication = {
                     navController.navigate(Routes.Patient.EDITOR_NEW)
                 },
@@ -83,13 +104,19 @@ fun PatientNavGraph(
         }
 
         composable(Routes.Patient.GARDEN) {
-            GardenScreen(plant = state.plant)
+            GardenScreen(
+                plant = state.plant
+            )
         }
 
         composable(Routes.Patient.SETTINGS) {
             AccountSettingsScreen(
                 account = account,
                 onBack = { navController.popBackStack() },
+                onOpenCompanions = {
+                    navController.navigate(Routes.Patient.COMPANIONS)
+                },
+                onShowTutorial = onShowTutorial,
                 onLinkEmail = onLinkEmail,
                 onSignOut = onSignOut,
                 onClearAuthMessages = onClearAuthMessages,

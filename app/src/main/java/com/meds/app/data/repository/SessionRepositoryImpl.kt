@@ -54,6 +54,13 @@ class SessionRepositoryImpl(
         preferences.markBiometricAsked()
     }
 
+    override fun tutorialSeen(uid: String): Flow<Boolean> =
+        preferences.tutorialSeen(uid)
+
+    override suspend fun markTutorialSeen(uid: String) {
+        preferences.markTutorialSeen(uid)
+    }
+
     override suspend fun clear() {
         preferences.clearAll()
     }
