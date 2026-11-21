@@ -6,6 +6,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.provider.Settings
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
@@ -14,12 +15,14 @@ import com.meds.app.R
 
 object NotificationHelper {
     const val CHANNEL_REMINDERS = "meds_reminders"
+    const val CHANNEL_REMINDERS_SOFT = "meds_reminders_soft"
     const val CHANNEL_NUDGES = "meds_nudges"
     const val CHANNEL_NUDGES_V2 = "meds_nudges_v2"
     const val CHANNEL_COMPANIONS = "meds_companions"
 
     private const val NOTIFICATION_ID_NUDGE = 2001
     private const val NOTIFICATION_ID_COMPANION = 2002
+    private const val NOTIFICATION_ID_TEST = 2003
 
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -62,7 +65,19 @@ object NotificationHelper {
                 enableLights(true)
             }
 
-            manager.createNotificationChannels(listOf(reminders, nudges, nudgesV2, companions))
+            val remindersSoft = NotificationChannel(
+                CHANNEL_REMINDERS_SOFT,
+                "Recordatorios suaves",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Avisos de medicación sin vibración"
+                enableVibration(false)
+                enableLights(false)
+            }
+
+            manager.createNotificationChannels(
+                listOf(reminders, remindersSoft, nudges, nudgesV2, companions)
+            )
         }
     }
 
@@ -75,7 +90,8 @@ object NotificationHelper {
         dose: String,
         time: String,
         dateKey: String,
-        scheduledAt: Long
+        scheduledAt: Long,
+        soundEnabled: Boolean = true
     ) {
         val manager = NotificationManagerCompat.from(context)
         if (!manager.areNotificationsEnabled()) return
@@ -118,7 +134,7 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS)
+        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS_SOFT)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Toma de $medicationName")
             .setContentText("$dose · $time")
@@ -128,7 +144,8 @@ object NotificationHelper {
             )
             .setContentIntent(openPendingIntent)
             .setAutoCancel(true)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setSilent(!soundEnabled)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setColor(ContextCompat.getColor(context, R.color.ic_launcher_background))
@@ -217,4 +234,21 @@ object NotificationHelper {
 
         manager.notify(NOTIFICATION_ID_COMPANION, notification)
     }
+
+    fun showTestReminder(context: Context, soundEnabled: Boolean) {
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
+        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS_SOFT)
+            .setSmallIcon(R.drawable.ic_notification)
+            .setContentTitle("Así se verá tu aviso")
+            .setContentText("Un recordatorio suave de MEDs.")
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setSilent(!soundEnabled)
+            .setAutoCancel(true)
+            .build()
+        NotificationManagerCompat.from(context).notify(NOTIFICATION_ID_TEST, notification)
+    }
+
+    fun notificationSettingsIntent(context: Context): Intent =
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS)
+            .putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
 }

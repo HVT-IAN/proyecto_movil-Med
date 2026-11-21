@@ -210,9 +210,9 @@ class PatientViewModel(
         }
     }
 
-    fun snoozeDose(dose: DoseLog) {
+    fun snoozeDose(dose: DoseLog, minutes: Long = 10L) {
         viewModelScope.launch {
-            repository.snoozeDose(dose).onFailure { throwable ->
+            repository.snoozeDose(dose, minutes).onFailure { throwable ->
                 extras.update {
                     it.copy(error = throwable.message ?: "No se pudo posponer la toma.")
                 }

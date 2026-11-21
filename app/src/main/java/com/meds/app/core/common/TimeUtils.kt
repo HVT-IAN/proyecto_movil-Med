@@ -74,3 +74,34 @@ fun formatCountdownMillis(millis: Long): String {
     val seconds = totalSeconds % 60
     return String.format(Locale.US, "%02d:%02d", minutes, seconds)
 }
+
+/**
+ * Tiempo restante o transcurrido en lenguaje natural.
+ *
+ * Se mantiene separado de [relativeTime] para no alterar el widget ni las
+ * notificaciones. En la pantalla Hoy y en el foco se lee "faltan X".
+ */
+fun timeUntil(
+    epochMillis: Long,
+    nowMillis: Long = System.currentTimeMillis()
+): String {
+    if (epochMillis <= 0L) return ""
+    val difference = epochMillis - nowMillis
+    val minutes = (difference / 60_000L).toInt()
+    return when {
+        abs(minutes) <= 1 -> "ahora"
+        minutes in 2..59 -> "faltan $minutes min"
+        minutes in -59..-2 -> "hace ${-minutes} min"
+        minutes in 60..1_439 -> {
+            val hours = minutes / 60
+            val rest = minutes % 60
+            if (rest == 0) "faltan $hours h" else "faltan $hours h $rest min"
+        }
+        minutes <= -60 && minutes > -1_440 -> {
+            val hours = (-minutes) / 60
+            val rest = (-minutes) % 60
+            if (rest == 0) "hace $hours h" else "hace $hours h $rest min"
+        }
+        else -> formatTime(epochMillis)
+    }
+}

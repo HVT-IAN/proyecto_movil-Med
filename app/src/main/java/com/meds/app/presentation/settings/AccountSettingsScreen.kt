@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.QrCode2
 import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -80,6 +81,7 @@ fun AccountSettingsScreen(
     onClearAuthMessages: () -> Unit,
     onBiometricChange: (Boolean) -> Unit,
     onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {},
+    onOpenReminders: () -> Unit = {},
     onOpenCompanions: () -> Unit = {},
     onShowTutorial: () -> Unit = {}
 ) {
@@ -333,6 +335,20 @@ fun AccountSettingsScreen(
             Spacer(Modifier.height(24.dp))
 
             if (account.role == UserRole.PATIENT) {
+                SectionLabel(text = "Recordatorios")
+                Spacer(Modifier.height(10.dp))
+
+                MedsCard {
+                    SettingsActionRow(
+                        icon = Icons.Outlined.Notifications,
+                        title = "Recordatorios de medicación",
+                        subtitle = "Horarios, horas de silencio y avisos suaves.",
+                        onClick = onOpenReminders
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
                 SectionLabel(text = "Navegación")
                 Spacer(Modifier.height(10.dp))
 

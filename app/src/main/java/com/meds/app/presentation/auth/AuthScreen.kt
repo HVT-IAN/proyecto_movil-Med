@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,13 +46,13 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.meds.app.core.common.isValidEmail
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.MedsWordmark
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.SecondaryActionButton
+import com.meds.app.core.ui.components.SectionLabel
 
 @Composable
 fun AuthScreen(
@@ -98,26 +99,90 @@ fun AuthScreen(
         ) {
             MedsWordmark()
 
-            Spacer(Modifier.height(26.dp))
+            Spacer(Modifier.height(24.dp))
             Text(
-                text = if (isRegister) "Crea tu cuenta" else "Bienvenido de nuevo",
+                text = if (isRegister) "Crea tu cuenta" else "Empieza sin fricción",
                 style = MaterialTheme.typography.displaySmall,
                 color = MaterialTheme.colorScheme.onBackground
             )
             Spacer(Modifier.height(8.dp))
             Text(
                 text = if (isRegister) {
-                    "Guarda tu progreso y recupera tus medicamentos desde cualquier dispositivo."
+                    "Guarda tu progreso con correo o entra ahora mismo sin cuenta."
                 } else {
-                    "Inicia sesión para recuperar tu jardín, tus medicamentos y tu historial."
+                    "Registra tu primera toma de inmediato. Puedes usar un correo ahora o vincularlo después."
                 },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
 
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(24.dp))
+
+            PrimaryActionButton(
+                text = if (authLoading) "Preparando tu espacio..." else "Continuar sin cuenta",
+                onClick = {
+                    focusManager.clearFocus()
+                    onAnonymous()
+                },
+                enabled = !authLoading,
+                icon = Icons.Outlined.PersonOutline
+            )
+
+            Spacer(Modifier.height(14.dp))
+
+            AnonymousDataNotice()
+
+            if (authError != null) {
+                Spacer(Modifier.height(16.dp))
+                MessageCard(
+                    text = authError,
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
+                    iconTint = MaterialTheme.colorScheme.error,
+                    isError = true
+                )
+            }
+
+            if (authNotice != null) {
+                Spacer(Modifier.height(16.dp))
+                MessageCard(
+                    text = authNotice,
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    iconTint = MaterialTheme.colorScheme.primary,
+                    isError = false
+                )
+            }
+
+            Spacer(Modifier.height(24.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                Text(
+                    text = if (isRegister) "o crea una cuenta con correo" else "o entra con tu correo",
+                    modifier = Modifier.padding(horizontal = 12.dp),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                HorizontalDivider(
+                    modifier = Modifier.weight(1f),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+            }
+
+            Spacer(Modifier.height(20.dp))
 
             MedsCard {
+                SectionLabel(
+                    text = if (isRegister) "Crear cuenta con correo" else "Acceso con correo"
+                )
+                Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
@@ -233,35 +298,15 @@ fun AuthScreen(
                 }
             }
 
-            if (authError != null) {
-                Spacer(Modifier.height(16.dp))
-                MessageCard(
-                    text = authError,
-                    containerColor = MaterialTheme.colorScheme.errorContainer,
-                    contentColor = MaterialTheme.colorScheme.onErrorContainer,
-                    iconTint = MaterialTheme.colorScheme.error,
-                    isError = true
-                )
-            }
-
-            if (authNotice != null) {
-                Spacer(Modifier.height(16.dp))
-                MessageCard(
-                    text = authNotice,
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-                    iconTint = MaterialTheme.colorScheme.primary,
-                    isError = false
-                )
-            }
-
             if (!isRegister) {
                 TextButton(
                     onClick = {
                         onClearAuthMessages()
                         showResetDialog = true
                     },
-                    modifier = Modifier.align(Alignment.End)
+                    modifier = Modifier
+                        .align(Alignment.End)
+                        .heightIn(min = 48.dp)
                 ) {
                     Text("¿Olvidaste tu contraseña?")
                 }
@@ -269,55 +314,26 @@ fun AuthScreen(
                 Spacer(Modifier.height(12.dp))
             }
 
-            PrimaryActionButton(
+            SecondaryActionButton(
                 text = when {
                     authLoading && isRegister -> "Creando cuenta..."
                     authLoading -> "Entrando..."
-                    isRegister -> "Crear cuenta"
-                    else -> "Entrar"
+                    isRegister -> "Crear cuenta con correo"
+                    else -> "Entrar con correo"
                 },
                 onClick = submit,
                 enabled = canSubmit
             )
 
-            Spacer(Modifier.height(20.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-                Text(
-                    text = "o",
-                    modifier = Modifier.padding(horizontal = 12.dp),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = MaterialTheme.colorScheme.outlineVariant
-                )
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            SecondaryActionButton(
-                text = if (authLoading) "Preparando tu espacio..." else "Continuar sin cuenta",
-                onClick = onAnonymous,
-                enabled = !authLoading,
-                icon = Icons.Outlined.PersonOutline
-            )
-
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
 
             TextButton(
                 onClick = {
                     onModeChange(if (isRegister) AuthMode.LOGIN else AuthMode.REGISTER)
                 },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 48.dp)
             ) {
                 Text(
                     if (isRegister) {
@@ -327,17 +343,6 @@ fun AuthScreen(
                     }
                 )
             }
-
-            Spacer(Modifier.height(16.dp))
-
-            Text(
-                text = "Tus datos se guardan de forma segura. " +
-                    "También puedes empezar sin cuenta y vincular un correo más adelante.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-            )
 
             Spacer(Modifier.height(16.dp))
         }
@@ -375,13 +380,17 @@ fun AuthScreen(
                         showResetDialog = false
                         onSendPasswordReset(email.trim())
                     },
-                    enabled = emailValid
+                    enabled = emailValid,
+                    modifier = Modifier.heightIn(min = 48.dp)
                 ) {
                     Text("Enviar enlace")
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showResetDialog = false }) {
+                TextButton(
+                    onClick = { showResetDialog = false },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                ) {
                     Text("Cancelar")
                 }
             }
@@ -423,3 +432,4 @@ private fun MessageCard(
         )
     }
 }
+

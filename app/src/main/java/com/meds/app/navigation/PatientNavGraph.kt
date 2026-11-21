@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,6 +19,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.meds.app.core.ui.theme.calma.CalmaMotion
+import com.meds.app.domain.model.DoseLog
 import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.presentation.patient.cima.MedicationInfoScreen
 import com.meds.app.presentation.patient.companion.PatientCompanionScreen
@@ -31,6 +33,7 @@ import com.meds.app.presentation.patient.PatientUiState
 import com.meds.app.presentation.patient.PatientViewModel
 import com.meds.app.presentation.settings.AccountSettingsScreen
 import com.meds.app.presentation.settings.AccountUiState
+import com.meds.app.presentation.settings.ReminderSettingsScreen
 
 /**
  * Destinos internos del módulo paciente.
@@ -53,6 +56,7 @@ fun PatientNavGraph(
     onClearAuthMessages: () -> Unit,
     onBiometricChange: (Boolean) -> Unit,
     onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {},
+    onFocusDose: (DoseLog) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -73,6 +77,11 @@ fun PatientNavGraph(
         }
     ) {
         composable(Routes.Patient.HOME) {
+            LaunchedEffect(state.saveSuccess) {
+                if (state.saveSuccess) {
+                    patientViewModel.consumeSaveSuccess()
+                }
+            }
             HomeScreen(
                 name = account.name,
                 state = state,
@@ -83,13 +92,15 @@ fun PatientNavGraph(
                 },
                 onTakeDose = patientViewModel::takeDose,
                 onSnoozeDose = patientViewModel::snoozeDose,
+                onOpenFocus = onFocusDose,
                 onViewAll = {
                     navController.navigate(Routes.Patient.HISTORY)
                 },
                 onOpenCompanions = {
                     navController.navigate(Routes.Patient.COMPANIONS)
                 },
-                onMarkNudgeRead = patientViewModel::markNudgeRead
+                onMarkNudgeRead = patientViewModel::markNudgeRead,
+                onQuickAddMedication = patientViewModel::saveMedication
             )
         }
 
@@ -123,13 +134,23 @@ fun PatientNavGraph(
                 onSignOut = onSignOut,
                 onClearAuthMessages = onClearAuthMessages,
                 onBiometricChange = onBiometricChange,
-                onNavBarStyleChange = onNavBarStyleChange
+                onNavBarStyleChange = onNavBarStyleChange,
+                onOpenReminders = {
+                    navController.navigate(Routes.Patient.REMINDERS)
+                }
             )
         }
 
         composable(Routes.Patient.HISTORY) {
             HistoryScreen(
                 doses = state.recentDoses,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.Patient.REMINDERS) {
+            ReminderSettingsScreen(
+                medications = state.medications,
                 onBack = { navController.popBackStack() }
             )
         }
