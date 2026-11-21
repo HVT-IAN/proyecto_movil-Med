@@ -21,7 +21,6 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +36,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.meds.app.core.ui.components.BreathingDots
 import com.meds.app.core.ui.components.EmptyState
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PrimaryActionButton
@@ -158,7 +158,11 @@ fun MedicationInfoScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                        BreathingDots(
+                            color = MaterialTheme.colorScheme.primary,
+                            dotSize = 6.dp,
+                            spacing = 6.dp
+                        )
                         Spacer(Modifier.height(12.dp))
                         Text(
                             text = "Buscando en CIMA...",

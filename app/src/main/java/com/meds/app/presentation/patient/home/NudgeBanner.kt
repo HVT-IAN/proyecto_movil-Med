@@ -76,7 +76,7 @@ fun NudgeBanner(
         TextActionButton(
             text = "Entendido",
             onClick = onDismiss,
-            modifier = Modifier.fillMaxWidth()
+            compact = true
         )
     }
 }

@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
@@ -16,6 +17,9 @@ class PreferencesStore(private val context: Context) {
     private val onboardedKey = booleanPreferencesKey("onboarded")
     private val biometricEnabledKey = booleanPreferencesKey("biometric_enabled")
     private val biometricAskedKey = booleanPreferencesKey("biometric_asked")
+    private val tutorialSeenUidsKey = stringSetPreferencesKey("tutorial_seen_uids")
+    private val navBarStyleKey = stringPreferencesKey("patient_nav_bar_style")
+
     val role: Flow<String?> = context.medsDataStore.data.map { it[roleKey] }
     val name: Flow<String> = context.medsDataStore.data.map { it[nameKey].orEmpty() }
     val onboarded: Flow<Boolean> = context.medsDataStore.data.map { it[onboardedKey] ?: false }
@@ -23,6 +27,13 @@ class PreferencesStore(private val context: Context) {
         context.medsDataStore.data.map { it[biometricEnabledKey] ?: false }
     val biometricAsked: Flow<Boolean> =
         context.medsDataStore.data.map { it[biometricAskedKey] ?: false }
+    val navBarStyle: Flow<String?> =
+        context.medsDataStore.data.map { it[navBarStyleKey] }
+
+    fun tutorialSeen(uid: String): Flow<Boolean> =
+        context.medsDataStore.data.map { preferences ->
+            uid.isNotBlank() && preferences[tutorialSeenUidsKey].orEmpty().contains(uid)
+        }
 
     suspend fun setRole(role: String) {
         context.medsDataStore.edit { preferences ->
@@ -68,6 +79,20 @@ class PreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setNavBarStyle(style: String) {
+        context.medsDataStore.edit { preferences ->
+            preferences[navBarStyleKey] = style
+        }
+    }
+
+    suspend fun markTutorialSeen(uid: String) {
+        if (uid.isBlank()) return
+        context.medsDataStore.edit { preferences ->
+            preferences[tutorialSeenUidsKey] =
+                preferences[tutorialSeenUidsKey].orEmpty() + uid
+        }
+    }
+
     suspend fun clearAll() {
         context.medsDataStore.edit { preferences ->
             preferences.remove(roleKey)
@@ -75,6 +100,7 @@ class PreferencesStore(private val context: Context) {
             preferences.remove(onboardedKey)
             preferences.remove(biometricEnabledKey)
             preferences.remove(biometricAskedKey)
+            preferences.remove(navBarStyleKey)
         }
     }
 }

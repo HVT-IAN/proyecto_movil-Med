@@ -3,10 +3,11 @@ package com.meds.app.presentation.settings
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,19 +23,27 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.HelpOutline
+import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Link
+import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.QrCode2
+import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,7 +53,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.meds.app.BuildConfig
@@ -55,6 +67,7 @@ import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.SectionLabel
 import com.meds.app.core.ui.components.SignOutConfirmDialog
 import com.meds.app.core.ui.theme.LocalMedsColors
+import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.domain.model.UserRole
 import com.meds.app.integration.biometric.findFragmentActivity
 import com.meds.app.integration.biometric.requestSecurityConfirmation
@@ -66,7 +79,11 @@ fun AccountSettingsScreen(
     onLinkEmail: (String, String) -> Unit,
     onSignOut: () -> Unit,
     onClearAuthMessages: () -> Unit,
-    onBiometricChange: (Boolean) -> Unit
+    onBiometricChange: (Boolean) -> Unit,
+    onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {},
+    onOpenReminders: () -> Unit = {},
+    onOpenCompanions: () -> Unit = {},
+    onShowTutorial: () -> Unit = {}
 ) {
     val colors = LocalMedsColors.current
     val roleLabel = if (account.role == UserRole.PATIENT) "Paciente" else "Acompañante"
@@ -317,6 +334,72 @@ fun AccountSettingsScreen(
 
             Spacer(Modifier.height(24.dp))
 
+            if (account.role == UserRole.PATIENT) {
+                SectionLabel(text = "Recordatorios")
+                Spacer(Modifier.height(10.dp))
+
+                MedsCard {
+                    SettingsActionRow(
+                        icon = Icons.Outlined.Notifications,
+                        title = "Recordatorios de medicación",
+                        subtitle = "Horarios, horas de silencio y avisos suaves.",
+                        onClick = onOpenReminders
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                SectionLabel(text = "Navegación")
+                Spacer(Modifier.height(10.dp))
+
+                MedsCard {
+                    NavBarStyleOptionRow(
+                        icon = Icons.Outlined.ViewCarousel,
+                        title = "Barra estática",
+                        subtitle = "Muestra las 4 pestañas fijas con icono y etiqueta.",
+                        selected = account.navBarStyle == PatientNavBarStyle.STATIC,
+                        onClick = { onNavBarStyleChange(PatientNavBarStyle.STATIC) }
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp
+                    )
+                    NavBarStyleOptionRow(
+                        icon = Icons.Outlined.Hub,
+                        title = "Barra de solo iconos (grafo)",
+                        subtitle = "Barra con Hoy, Ajustes y botón central que abre círculos en forma de grafo.",
+                        selected = account.navBarStyle == PatientNavBarStyle.GRAPH_ICONS,
+                        onClick = { onNavBarStyleChange(PatientNavBarStyle.GRAPH_ICONS) }
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                SectionLabel(text = "Apoyo")
+                Spacer(Modifier.height(10.dp))
+
+                MedsCard {
+                    SettingsActionRow(
+                        icon = Icons.Outlined.QrCode2,
+                        title = "Acompañante",
+                        subtitle = "Comparte tu progreso y gestiona quién te acompaña.",
+                        onClick = onOpenCompanions
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp
+                    )
+                    SettingsActionRow(
+                        icon = Icons.AutoMirrored.Outlined.HelpOutline,
+                        title = "Cómo funciona MEDs",
+                        subtitle = "Consulta la guía rápida de la app.",
+                        onClick = onShowTutorial
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+            }
+
             SectionLabel(text = "Sesión")
             Spacer(Modifier.height(10.dp))
 
@@ -329,31 +412,30 @@ fun AccountSettingsScreen(
                     )
                     Spacer(Modifier.height(18.dp))
                 }
-                OutlinedButton(
-                    onClick = { showSignOutDialog = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 56.dp),
-                    enabled = !account.authLoading,
-                    shape = RoundedCornerShape(18.dp),
-                    border = BorderStroke(
-                        1.dp,
-                        MaterialTheme.colorScheme.error.copy(alpha = 0.45f)
-                    ),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = MaterialTheme.colorScheme.error
-                    )
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.Logout,
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "Cerrar sesión",
-                        style = MaterialTheme.typography.labelLarge
-                    )
+                    TextButton(
+                        onClick = { showSignOutDialog = true },
+                        enabled = !account.authLoading,
+                        modifier = Modifier.heightIn(min = 48.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.Logout,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Cerrar sesión",
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
                 }
             }
 
@@ -391,6 +473,100 @@ fun AccountSettingsScreen(
                 onSignOut()
             },
             onDismiss = { showSignOutDialog = false }
+        )
+    }
+}
+
+@Composable
+private fun SettingsActionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Icon(
+            imageVector = Icons.AutoMirrored.Outlined.KeyboardArrowRight,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun NavBarStyleOptionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        RadioButton(
+            selected = selected,
+            onClick = null
         )
     }
 }

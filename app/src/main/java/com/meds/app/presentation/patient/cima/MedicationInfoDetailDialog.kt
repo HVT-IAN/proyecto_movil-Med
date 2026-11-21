@@ -18,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,6 +30,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.meds.app.core.ui.components.BreathingDots
 import com.meds.app.core.ui.components.SectionLabel
 import com.meds.app.core.ui.components.TextActionButton
 import com.meds.app.domain.model.MedicationInfoDetail
@@ -90,7 +90,11 @@ internal fun MedicationInfoDetailDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                                BreathingDots(
+                                    color = MaterialTheme.colorScheme.primary,
+                                    dotSize = 6.dp,
+                                    spacing = 6.dp
+                                )
                                 Spacer(Modifier.height(12.dp))
                                 Text(
                                     text = "Cargando ficha...",

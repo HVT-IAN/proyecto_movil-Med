@@ -5,11 +5,13 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.meds.app.data.local.OfflineMedicationStore
 import com.meds.app.data.local.PreferencesStore
+import com.meds.app.data.local.ReminderPreferences
 import com.meds.app.data.repository.AuthRepositoryImpl
 import com.meds.app.data.repository.CompanionRepositoryImpl
 import com.meds.app.data.repository.MedicationCacheRepositoryImpl
 import com.meds.app.data.repository.MedicationInfoRepositoryImpl
 import com.meds.app.data.repository.PatientRepositoryImpl
+import com.meds.app.data.repository.ReminderSettingsRepositoryImpl
 import com.meds.app.data.repository.SessionRepositoryImpl
 import com.meds.app.data.repository.UserRepositoryImpl
 import com.meds.app.domain.repository.AuthRepository
@@ -17,6 +19,7 @@ import com.meds.app.domain.repository.CompanionRepository
 import com.meds.app.domain.repository.MedicationCacheRepository
 import com.meds.app.domain.repository.MedicationInfoRepository
 import com.meds.app.domain.repository.PatientRepository
+import com.meds.app.domain.repository.ReminderSettingsRepository
 import com.meds.app.domain.repository.SessionRepository
 import com.meds.app.domain.repository.UserRepository
 import com.meds.app.integration.notifications.AlarmScheduler
@@ -35,8 +38,12 @@ class AppContainer(context: Context) {
 
     private val preferencesStore = PreferencesStore(appContext)
     private val offlineMedicationStore = OfflineMedicationStore(appContext)
+    private val reminderPreferences = ReminderPreferences(appContext)
 
-    val alarmScheduler: AlarmScheduler = AlarmScheduler(appContext)
+    val alarmScheduler: AlarmScheduler = AlarmScheduler(appContext, reminderPreferences)
+
+    val reminderSettingsRepository: ReminderSettingsRepository =
+        ReminderSettingsRepositoryImpl(reminderPreferences, alarmScheduler)
 
     val sessionRepository: SessionRepository = SessionRepositoryImpl(preferencesStore)
     val medicationCacheRepository: MedicationCacheRepository =

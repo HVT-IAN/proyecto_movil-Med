@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -31,10 +32,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.meds.app.core.ui.theme.Fraunces
+import com.meds.app.core.ui.theme.LemonMilk
 import com.meds.app.core.ui.theme.LocalMedsColors
 
 @Composable
@@ -43,9 +45,15 @@ fun MedsWordmark(
     color: androidx.compose.ui.graphics.Color = MaterialTheme.colorScheme.primary
 ) {
     Text(
+        // Lemon Milk dibuja la "s" a altura de mayúscula: el logotipo se lee MEDS.
         text = "MEDs",
         modifier = modifier,
-        style = MaterialTheme.typography.displayMedium.copy(fontFamily = Fraunces),
+        style = MaterialTheme.typography.displayMedium.copy(
+            fontFamily = LemonMilk,
+            fontWeight = FontWeight.Bold,
+            fontSize = 34.sp,
+            letterSpacing = 0.5.sp
+        ),
         color = color
     )
 }
@@ -91,16 +99,22 @@ fun SecondaryActionButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
-    icon: ImageVector? = null
+    icon: ImageVector? = null,
+    fillWidth: Boolean = true
 ) {
     OutlinedButton(
         onClick = onClick,
         modifier = modifier
-            .fillMaxWidth()
-            .heightIn(min = 56.dp),
+            .then(if (fillWidth) Modifier.fillMaxWidth() else Modifier)
+            .heightIn(min = if (fillWidth) 56.dp else 48.dp),
         enabled = enabled,
-        shape = RoundedCornerShape(18.dp),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+        shape = RoundedCornerShape(if (fillWidth) 18.dp else 16.dp),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+        contentPadding = if (fillWidth) {
+            ButtonDefaults.ContentPadding
+        } else {
+            PaddingValues(horizontal = 20.dp)
+        }
     ) {
         if (icon != null) {
             Icon(
@@ -121,9 +135,18 @@ fun SecondaryActionButton(
 fun TextActionButton(
     text: String,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    compact: Boolean = false
 ) {
-    TextButton(onClick = onClick, modifier = modifier) {
+    TextButton(
+        onClick = onClick,
+        modifier = modifier.then(if (compact) Modifier.heightIn(min = 40.dp) else Modifier),
+        contentPadding = if (compact) {
+            PaddingValues(horizontal = 12.dp)
+        } else {
+            ButtonDefaults.TextButtonContentPadding
+        }
+    ) {
         Text(text = text, style = MaterialTheme.typography.labelLarge)
     }
 }

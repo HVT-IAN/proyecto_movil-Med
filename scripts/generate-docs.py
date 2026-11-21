@@ -573,7 +573,7 @@ val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
 
     # 5. UI
     story.append(H1("5. Interfaz con Jetpack Compose y navegación"))
-    story.append(P("Toda la interfaz es Compose + Material 3. El tema Sereno clínico usa Manrope para texto y Fraunces para títulos, con paleta teal, fondos claros y modo oscuro. Los componentes reutilizables (MedsCard, PrimaryActionButton, SecondaryActionButton, TextActionButton, EmptyState) mantienen la consistencia."))
+    story.append(P("Toda la interfaz es Compose + Material 3. El tema Sereno clínico usa Manrope para toda la interfaz y Lemon Milk solo en la marca, con paleta teal, fondos claros y modo oscuro. Los componentes reutilizables (MedsCard, PrimaryActionButton, SecondaryActionButton, TextActionButton, EmptyState) mantienen la consistencia."))
     story.append(H2("5.1 Navegación"))
     story.append(T([
         ["Ruta", "Pantalla", "Propósito"],
