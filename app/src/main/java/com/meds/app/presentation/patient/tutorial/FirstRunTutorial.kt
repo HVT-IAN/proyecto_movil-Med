@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,15 +36,16 @@ import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.TextActionButton
 
 /**
- * Guía breve de primera vez.
+ * Guía breve sobre cómo funciona MEDs.
  *
- * Una sola hoja, sin carrusel. Explica los cuatro destinos fijos y dónde vive
- * el historial. Se puede cerrar deslizando, con "Saltar" o con
- * "Empezar"; en Ajustes hay un acceso para volver a verla.
+ * No se muestra de forma automática al arrancar: se abre únicamente después
+ * de guardar el primer medicamento o bajo demanda desde Ajustes →
+ * "Cómo funciona MEDs".
  */
 @Composable
 fun FirstRunTutorial(
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    isFirstMedication: Boolean = false
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
@@ -66,20 +68,25 @@ fun FirstRunTutorial(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Así funciona MEDs",
+                        text = "Cómo funciona MEDs",
                         style = MaterialTheme.typography.headlineMedium,
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Spacer(Modifier.height(6.dp))
                     Text(
-                        text = "Cuatro lugares y todo lo demás a la vista.",
+                        text = if (isFirstMedication) {
+                            "Tu primer medicamento ya está listo. Así se organiza tu espacio."
+                        } else {
+                            "Usa la barra inferior para moverte entre las cuatro secciones."
+                        },
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
                 TextActionButton(
-                    text = "Saltar",
-                    onClick = onDismiss
+                    text = "Cerrar",
+                    onClick = onDismiss,
+                    modifier = Modifier.heightIn(min = 48.dp)
                 )
             }
 
@@ -139,7 +146,7 @@ fun FirstRunTutorial(
             Spacer(Modifier.height(24.dp))
 
             PrimaryActionButton(
-                text = "Empezar",
+                text = if (isFirstMedication) "Ir a mis tomas" else "Entendido",
                 onClick = onDismiss
             )
         }

@@ -4,11 +4,13 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import com.meds.app.MedsApp
+import com.meds.app.domain.model.ReminderRules
 import com.meds.app.domain.model.doseLogId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
+import java.time.LocalTime
 
 class MedicationAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -27,10 +29,20 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
             try {
                 val container = (context.applicationContext as MedsApp).container
                 val repository = container.patientRepository
+                val settings = container.reminderSettingsRepository.current()
+                val minuteOfDay = LocalTime.now().let { it.hour * 60 + it.minute }
+
                 val alreadyTaken = withTimeoutOrNull(4_000L) {
                     repository.isDoseTaken(logId)
                 } ?: false
-                if (!alreadyTaken) {
+
+                val shouldNotify = ReminderRules.shouldNotify(
+                    settings = settings,
+                    medicationId = medicationId,
+                    minuteOfDay = minuteOfDay
+                )
+
+                if (shouldNotify && !alreadyTaken) {
                     NotificationHelper.showMedicationReminder(
                         context = context,
                         logId = logId,
@@ -40,7 +52,8 @@ class MedicationAlarmReceiver : BroadcastReceiver() {
                         dose = dose,
                         time = time,
                         dateKey = dateKey,
-                        scheduledAt = scheduledAt
+                        scheduledAt = scheduledAt,
+                        soundEnabled = settings.soundEnabled
                     )
                 }
                 container.alarmScheduler.rescheduleAll()

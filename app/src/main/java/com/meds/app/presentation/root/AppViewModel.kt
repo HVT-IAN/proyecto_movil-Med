@@ -241,11 +241,12 @@ class AppViewModel(
     }
 
     fun completeOnboarding(name: String) {
+        val resolvedName = name.trim().ifBlank { DEFAULT_USER_NAME }
         viewModelScope.launch {
-            sessionRepository.completeOnboarding(name)
+            sessionRepository.completeOnboarding(resolvedName)
             val uid = authRepository.currentUserId ?: return@launch
             val role = sessionRepository.currentRole() ?: return@launch
-            runCatching { userRepository.saveProfile(uid, role, name.trim()) }
+            runCatching { userRepository.saveProfile(uid, role, resolvedName) }
         }
     }
 
@@ -274,4 +275,7 @@ class AppViewModel(
         }
     }
 
+    private companion object {
+        const val DEFAULT_USER_NAME = "Hola"
+    }
 }

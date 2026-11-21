@@ -8,16 +8,21 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationManagerCompat
+import com.meds.app.core.common.formatTime
+import com.meds.app.data.local.ReminderPreferences
 import com.meds.app.domain.model.DoseLog
 import com.meds.app.domain.model.doseLogId
-import com.meds.app.core.common.formatTime
+import com.meds.app.domain.repository.ReminderSettingsSource
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
 
-class AlarmScheduler(context: Context) {
+class AlarmScheduler(
+    context: Context,
+    private val reminderSettings: ReminderSettingsSource = ReminderPreferences(context)
+) {
     private val appContext = context.applicationContext
     private val alarmManager = appContext.getSystemService(AlarmManager::class.java)
     private val preferences = appContext.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
@@ -31,6 +36,7 @@ class AlarmScheduler(context: Context) {
     ) {
         cancelForSchedule(scheduleId)
         val alarms = loadAlarms().toMutableList()
+        val settings = reminderSettings.current()
         val now = System.currentTimeMillis()
 
         times.distinct().forEach { time ->
@@ -51,7 +57,9 @@ class AlarmScheduler(context: Context) {
                 dateKey = dateKey
             )
             alarms.add(alarm)
-            schedule(alarm)
+            if (settings.shouldSchedule(medicationId)) {
+                schedule(alarm)
+            }
         }
 
         saveAlarms(alarms)
@@ -83,29 +91,57 @@ class AlarmScheduler(context: Context) {
         schedule(alarm)
     }
 
-    fun rescheduleAll() {
+    /**
+     * Aplica master y toggle por medicamento sin borrar las entradas guardadas.
+     * Al reactivar, `refreshTrigger` evita que una alarma vieja dispare de inmediato.
+     */
+    fun applyReminderSettings() {
+        val settings = reminderSettings.current()
         val now = System.currentTimeMillis()
-        val alarms = loadAlarms()
-        val updated = alarms.map { alarm ->
-            val localTime = runCatching { LocalTime.parse(alarm.time) }.getOrNull()
-            val triggerAt = if (localTime != null) {
-                nextOccurrence(localTime, now, bufferMillis = 0L)
+        val updated = loadAlarms().map { alarm ->
+            if (settings.shouldSchedule(alarm.medicationId)) {
+                val refreshed = refreshTrigger(alarm, now)
+                schedule(refreshed)
+                refreshed
             } else {
-                var candidate = alarm.triggerAt
-                while (candidate <= now) {
-                    candidate += DAY_MILLIS
-                }
-                candidate
+                cancel(alarm)
+                alarm
             }
-            val dateKey = Instant.ofEpochMilli(triggerAt)
-                .atZone(ZoneId.systemDefault())
-                .toLocalDate()
-                .toString()
-            val copy = alarm.copy(triggerAt = triggerAt, dateKey = dateKey)
-            schedule(copy)
-            copy
         }
         saveAlarms(updated)
+    }
+
+    fun rescheduleAll() {
+        val settings = reminderSettings.current()
+        val now = System.currentTimeMillis()
+        val updated = loadAlarms().map { alarm ->
+            val refreshed = refreshTrigger(alarm, now)
+            if (settings.shouldSchedule(refreshed.medicationId)) {
+                schedule(refreshed)
+            } else {
+                cancel(alarm)
+            }
+            refreshed
+        }
+        saveAlarms(updated)
+    }
+
+    private fun refreshTrigger(alarm: ScheduledAlarm, now: Long): ScheduledAlarm {
+        val localTime = runCatching { LocalTime.parse(alarm.time) }.getOrNull()
+        val triggerAt = if (localTime != null) {
+            nextOccurrence(localTime, now, bufferMillis = 0L)
+        } else {
+            var candidate = alarm.triggerAt
+            while (candidate <= now) {
+                candidate += DAY_MILLIS
+            }
+            candidate
+        }
+        val dateKey = Instant.ofEpochMilli(triggerAt)
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .toString()
+        return alarm.copy(triggerAt = triggerAt, dateKey = dateKey)
     }
 
     private fun schedule(alarm: ScheduledAlarm) {

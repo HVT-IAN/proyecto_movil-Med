@@ -11,6 +11,7 @@ import com.meds.app.presentation.patient.cima.MedicationInfoViewModel
 import com.meds.app.presentation.patient.companion.PatientCompanionViewModel
 import com.meds.app.presentation.patient.PatientViewModel
 import com.meds.app.presentation.root.AppViewModel
+import com.meds.app.presentation.settings.ReminderSettingsViewModel
 
 /**
  * Factoría única de ViewModels.
@@ -58,6 +59,10 @@ val MedsViewModelFactory: ViewModelProvider.Factory = viewModelFactory {
         MedicationInfoViewModel(
             repository = container.medicationInfoRepository
         )
+    }
+    initializer {
+        val container = container()
+        ReminderSettingsViewModel(container.reminderSettingsRepository)
     }
 }
 

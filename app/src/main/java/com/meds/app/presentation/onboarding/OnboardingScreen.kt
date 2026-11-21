@@ -3,10 +3,10 @@ package com.meds.app.presentation.onboarding
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -40,7 +41,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -53,14 +53,16 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import com.meds.app.domain.model.UserRole
-import com.meds.app.integration.notifications.AlarmScheduler
 import com.meds.app.core.ui.components.InfoRow
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.TextActionButton
 import com.meds.app.core.ui.theme.LemonMilk
 import com.meds.app.core.ui.theme.LocalMedsColors
+import com.meds.app.domain.model.UserRole
+import com.meds.app.integration.notifications.AlarmScheduler
+
+private const val DEFAULT_ONBOARDING_NAME = "Hola"
 
 @Composable
 fun OnboardingScreen(
@@ -73,10 +75,19 @@ fun OnboardingScreen(
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
 
+    val completeWithResolvedName: () -> Unit = {
+        focusManager.clearFocus()
+        onFinish(name.trim().ifBlank { DEFAULT_ONBOARDING_NAME })
+    }
+
+    BackHandler(enabled = step == 2) {
+        step = 1
+    }
+
     val exactAlarmLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
     ) {
-        onFinish(name.trim())
+        completeWithResolvedName()
     }
 
     val finishAfterPermissions: () -> Unit = {
@@ -84,17 +95,21 @@ fun OnboardingScreen(
         if (intent != null) {
             val launched = runCatching { exactAlarmLauncher.launch(intent) }.isSuccess
             if (!launched) {
-                onFinish(name.trim())
+                completeWithResolvedName()
             }
         } else {
-            onFinish(name.trim())
+            completeWithResolvedName()
         }
     }
 
     val notificationLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
-    ) {
-        finishAfterPermissions()
+    ) { granted ->
+        if (granted) {
+            finishAfterPermissions()
+        } else {
+            completeWithResolvedName()
+        }
     }
 
     val requestNotifications: () -> Unit = {
@@ -125,14 +140,21 @@ fun OnboardingScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (step == 2) {
-                    IconButton(onClick = { step = 1 }) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                            contentDescription = "Volver",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                IconButton(
+                    onClick = {
+                        focusManager.clearFocus()
+                        if (step == 2) {
+                            step = 1
+                        } else {
+                            onBack()
+                        }
                     }
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
+                        contentDescription = if (step == 2) "Volver" else "Volver a elegir rol",
+                        tint = MaterialTheme.colorScheme.onSurface
+                    )
                 }
                 Text(
                     text = "MEDs",
@@ -142,16 +164,21 @@ fun OnboardingScreen(
                         letterSpacing = 0.5.sp
                     ),
                     color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(start = if (step == 1) 0.dp else 4.dp)
+                    modifier = Modifier.padding(start = 4.dp)
                 )
                 Spacer(Modifier.weight(1f))
-                IconButton(onClick = onBack) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
-                        contentDescription = "Volver a elegir rol",
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
+                TextActionButton(
+                    text = "Saltar",
+                    onClick = {
+                        focusManager.clearFocus()
+                        if (step == 1) {
+                            step = 2
+                        } else {
+                            completeWithResolvedName()
+                        }
+                    },
+                    modifier = Modifier.heightIn(min = 48.dp)
+                )
             }
 
             Spacer(Modifier.height(24.dp))
@@ -173,9 +200,9 @@ fun OnboardingScreen(
                     Spacer(Modifier.height(10.dp))
                     Text(
                         text = if (role == UserRole.PATIENT) {
-                            "Así te saludaremos y personalizaremos tu espacio."
+                            "Así te saludaremos en tu espacio. Si prefieres omitirlo, usaremos «Hola»."
                         } else {
-                            "Así te verá la persona que acompañas."
+                            "Así te verá la persona que acompañas. Puedes omitirlo si prefieres."
                         },
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -187,8 +214,8 @@ fun OnboardingScreen(
                             if (value.length <= 40) name = value
                         },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Tu nombre") },
-                        placeholder = { Text("Escribe tu nombre") },
+                        label = { Text("Tu nombre (opcional)") },
+                        placeholder = { Text(DEFAULT_ONBOARDING_NAME) },
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                         keyboardOptions = KeyboardOptions(
@@ -196,14 +223,31 @@ fun OnboardingScreen(
                             imeAction = ImeAction.Done
                         ),
                         keyboardActions = KeyboardActions(
-                            onDone = { focusManager.clearFocus() }
+                            onDone = {
+                                focusManager.clearFocus()
+                                step = 2
+                            }
                         )
                     )
                     Spacer(Modifier.height(28.dp))
                     PrimaryActionButton(
                         text = "Continuar",
-                        onClick = { step = 2 },
-                        enabled = name.isNotBlank()
+                        onClick = {
+                            focusManager.clearFocus()
+                            step = 2
+                        }
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    TextActionButton(
+                        text = "Omitir nombre",
+                        onClick = {
+                            focusManager.clearFocus()
+                            name = ""
+                            step = 2
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                     )
                 }
 
@@ -247,12 +291,7 @@ fun OnboardingScreen(
                         Spacer(Modifier.height(14.dp))
                         InfoRow(
                             icon = Icons.Outlined.Verified,
-                            text = "Puedes cambiar los horarios cuando quieras."
-                        )
-                        Spacer(Modifier.height(14.dp))
-                        InfoRow(
-                            icon = Icons.Outlined.Schedule,
-                            text = "Permite las alarmas exactas cuando el sistema lo solicite para recibir cada aviso a tiempo."
+                            text = "Puedes activar o cambiar los avisos más adelante en Ajustes."
                         )
                     }
                     Spacer(Modifier.height(28.dp))
@@ -263,8 +302,10 @@ fun OnboardingScreen(
                     Spacer(Modifier.height(8.dp))
                     TextActionButton(
                         text = "Ahora no",
-                        onClick = { onFinish(name.trim()) },
-                        modifier = Modifier.fillMaxWidth()
+                        onClick = completeWithResolvedName,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 48.dp)
                     )
                 }
 
@@ -314,7 +355,7 @@ fun OnboardingScreen(
                     Spacer(Modifier.height(28.dp))
                     PrimaryActionButton(
                         text = "Entrar al modo acompañante",
-                        onClick = { onFinish(name.trim()) }
+                        onClick = completeWithResolvedName
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
@@ -344,3 +385,4 @@ private fun StepBar(active: Boolean, wide: Boolean) {
             )
     )
 }
+
