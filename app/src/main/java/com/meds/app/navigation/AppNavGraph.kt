@@ -131,6 +131,7 @@ fun AppNavGraph(
                 biometricEnabled = state.biometricEnabled,
                 biometricAvailable = biometricAvailable,
                 deviceCredentialAvailable = deviceCredentialAvailable,
+                navBarStyle = state.navBarStyle,
                 authLoading = state.authLoading,
                 authError = state.authError,
                 authNotice = state.authNotice
@@ -151,7 +152,8 @@ fun AppNavGraph(
                         onLinkEmail = viewModel::linkEmail,
                         onSignOut = viewModel::signOut,
                         onClearAuthMessages = viewModel::clearAuthMessages,
-                        onBiometricChange = viewModel::setBiometricEnabled
+                        onBiometricChange = viewModel::setBiometricEnabled,
+                        onNavBarStyleChange = viewModel::setNavBarStyle
                     )
                 } else {
                     CompanionApp(

@@ -22,6 +22,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.meds.app.core.ui.theme.calma.CalmaTheme
 import com.meds.app.di.MedsViewModelFactory
+import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.integration.widget.NextDoseWidgetProvider
 import com.meds.app.navigation.PatientNavGraph
 import com.meds.app.navigation.Routes
@@ -45,7 +46,8 @@ fun PatientApp(
     onLinkEmail: (String, String) -> Unit,
     onSignOut: () -> Unit,
     onClearAuthMessages: () -> Unit,
-    onBiometricChange: (Boolean) -> Unit
+    onBiometricChange: (Boolean) -> Unit,
+    onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {}
 ) {
     val patientViewModel: PatientViewModel =
         viewModel(key = "patient_${account.userId}", factory = MedsViewModelFactory)
@@ -105,12 +107,15 @@ fun PatientApp(
                     PatientBottomBar(
                         currentRoute = currentRoute,
                         onNavigate = { route ->
-                            navController.navigate(route) {
-                                popUpTo(Routes.Patient.HOME) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
+                            if (currentRoute != route) {
+                                navController.navigate(route) {
+                                    popUpTo(Routes.Patient.HOME) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                        }
+                        },
+                        style = account.navBarStyle
                     )
                 }
             }
@@ -136,6 +141,7 @@ fun PatientApp(
                     onSignOut = onSignOut,
                     onClearAuthMessages = onClearAuthMessages,
                     onBiometricChange = onBiometricChange,
+                    onNavBarStyleChange = onNavBarStyleChange,
                     modifier = Modifier.weight(1f)
                 )
             }

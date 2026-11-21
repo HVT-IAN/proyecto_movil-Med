@@ -18,6 +18,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.meds.app.core.ui.theme.calma.CalmaMotion
+import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.presentation.patient.cima.MedicationInfoScreen
 import com.meds.app.presentation.patient.companion.PatientCompanionScreen
 import com.meds.app.presentation.patient.companion.PatientCompanionViewModel
@@ -51,6 +52,7 @@ fun PatientNavGraph(
     onSignOut: () -> Unit,
     onClearAuthMessages: () -> Unit,
     onBiometricChange: (Boolean) -> Unit,
+    onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     NavHost(
@@ -120,7 +122,8 @@ fun PatientNavGraph(
                 onLinkEmail = onLinkEmail,
                 onSignOut = onSignOut,
                 onClearAuthMessages = onClearAuthMessages,
-                onBiometricChange = onBiometricChange
+                onBiometricChange = onBiometricChange,
+                onNavBarStyleChange = onNavBarStyleChange
             )
         }
 

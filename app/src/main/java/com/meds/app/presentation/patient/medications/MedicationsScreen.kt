@@ -18,7 +18,6 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.Schedule
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -28,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.meds.app.core.common.formatTimeOfDay
+import com.meds.app.core.ui.components.BreathingDots
 import com.meds.app.core.ui.components.EmptyState
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.SecondaryActionButton
@@ -93,7 +93,11 @@ fun MedicationsScreen(
                         .padding(vertical = 48.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                    BreathingDots(
+                        color = MaterialTheme.colorScheme.primary,
+                        dotSize = 6.dp,
+                        spacing = 6.dp
+                    )
                 }
             }
 

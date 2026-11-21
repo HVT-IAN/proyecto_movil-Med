@@ -2,6 +2,7 @@ package com.meds.app.data.repository
 
 import com.meds.app.data.local.PreferencesStore
 import com.meds.app.domain.model.LocalSession
+import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.domain.repository.SessionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -12,7 +13,7 @@ class SessionRepositoryImpl(
     private val preferences: PreferencesStore
 ) : SessionRepository {
 
-    override val session: Flow<LocalSession> = combine(
+    private val baseSession: Flow<LocalSession> = combine(
         preferences.role,
         preferences.name,
         preferences.onboarded,
@@ -26,6 +27,13 @@ class SessionRepositoryImpl(
             biometricEnabled = biometricEnabled,
             biometricAsked = biometricAsked
         )
+    }
+
+    override val session: Flow<LocalSession> = combine(
+        baseSession,
+        preferences.navBarStyle
+    ) { base, navBarStyle ->
+        base.copy(navBarStyle = PatientNavBarStyle.fromName(navBarStyle))
     }
 
     override suspend fun currentRole(): String? = preferences.role.first()
@@ -52,6 +60,10 @@ class SessionRepositoryImpl(
 
     override suspend fun markBiometricAsked() {
         preferences.markBiometricAsked()
+    }
+
+    override suspend fun setNavBarStyle(style: PatientNavBarStyle) {
+        preferences.setNavBarStyle(style.name)
     }
 
     override fun tutorialSeen(uid: String): Flow<Boolean> =

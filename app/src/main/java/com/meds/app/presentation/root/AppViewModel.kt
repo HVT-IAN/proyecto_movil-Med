@@ -2,6 +2,7 @@ package com.meds.app.presentation.root
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.domain.model.UserRole
 import com.meds.app.domain.repository.AuthRepository
 import com.meds.app.domain.repository.MedicationCacheRepository
@@ -76,7 +77,8 @@ class AppViewModel(
                         name = local.name,
                         onboarded = local.onboarded,
                         biometricEnabled = local.biometricEnabled,
-                        biometricAsked = local.biometricAsked
+                        biometricAsked = local.biometricAsked,
+                        navBarStyle = local.navBarStyle
                     )
                 }
             }
@@ -259,10 +261,17 @@ class AppViewModel(
         }
     }
 
+    fun setNavBarStyle(style: PatientNavBarStyle) {
+        viewModelScope.launch {
+            sessionRepository.setNavBarStyle(style)
+        }
+    }
+
     fun goBackToRoleSelection() {
         viewModelScope.launch {
             sessionRepository.clearRole()
             _state.update { it.copy(role = null, onboarded = false) }
         }
     }
+
 }

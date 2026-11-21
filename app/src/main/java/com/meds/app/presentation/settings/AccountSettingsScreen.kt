@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -27,14 +28,17 @@ import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
 import androidx.compose.material.icons.outlined.CheckCircle
 import androidx.compose.material.icons.outlined.Fingerprint
+import androidx.compose.material.icons.outlined.Hub
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.QrCode2
+import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -62,6 +66,7 @@ import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.SectionLabel
 import com.meds.app.core.ui.components.SignOutConfirmDialog
 import com.meds.app.core.ui.theme.LocalMedsColors
+import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.domain.model.UserRole
 import com.meds.app.integration.biometric.findFragmentActivity
 import com.meds.app.integration.biometric.requestSecurityConfirmation
@@ -74,6 +79,7 @@ fun AccountSettingsScreen(
     onSignOut: () -> Unit,
     onClearAuthMessages: () -> Unit,
     onBiometricChange: (Boolean) -> Unit,
+    onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {},
     onOpenCompanions: () -> Unit = {},
     onShowTutorial: () -> Unit = {}
 ) {
@@ -327,6 +333,32 @@ fun AccountSettingsScreen(
             Spacer(Modifier.height(24.dp))
 
             if (account.role == UserRole.PATIENT) {
+                SectionLabel(text = "Navegación")
+                Spacer(Modifier.height(10.dp))
+
+                MedsCard {
+                    NavBarStyleOptionRow(
+                        icon = Icons.Outlined.ViewCarousel,
+                        title = "Barra estática",
+                        subtitle = "Muestra las 4 pestañas fijas con icono y etiqueta.",
+                        selected = account.navBarStyle == PatientNavBarStyle.STATIC,
+                        onClick = { onNavBarStyleChange(PatientNavBarStyle.STATIC) }
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp
+                    )
+                    NavBarStyleOptionRow(
+                        icon = Icons.Outlined.Hub,
+                        title = "Barra de solo iconos (grafo)",
+                        subtitle = "Barra con Hoy, Ajustes y botón central que abre círculos en forma de grafo.",
+                        selected = account.navBarStyle == PatientNavBarStyle.GRAPH_ICONS,
+                        onClick = { onNavBarStyleChange(PatientNavBarStyle.GRAPH_ICONS) }
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
                 SectionLabel(text = "Apoyo")
                 Spacer(Modifier.height(10.dp))
 
@@ -344,7 +376,7 @@ fun AccountSettingsScreen(
                     SettingsActionRow(
                         icon = Icons.AutoMirrored.Outlined.HelpOutline,
                         title = "Cómo funciona MEDs",
-                        subtitle = "Vuelve a ver la guía de la app.",
+                        subtitle = "Consulta la guía rápida de la app.",
                         onClick = onShowTutorial
                     )
                 }
@@ -371,6 +403,7 @@ fun AccountSettingsScreen(
                     TextButton(
                         onClick = { showSignOutDialog = true },
                         enabled = !account.authLoading,
+                        modifier = Modifier.heightIn(min = 48.dp),
                         contentPadding = PaddingValues(horizontal = 16.dp),
                         colors = ButtonDefaults.textButtonColors(
                             contentColor = MaterialTheme.colorScheme.error
@@ -438,6 +471,7 @@ private fun SettingsActionRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(12.dp))
             .clickable(role = Role.Button, onClick = onClick)
             .padding(vertical = 12.dp),
@@ -468,6 +502,55 @@ private fun SettingsActionRow(
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun NavBarStyleOptionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(role = Role.RadioButton, onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            tint = if (selected) {
+                MaterialTheme.colorScheme.primary
+            } else {
+                MaterialTheme.colorScheme.onSurfaceVariant
+            },
+            modifier = Modifier.size(22.dp)
+        )
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        RadioButton(
+            selected = selected,
+            onClick = null
         )
     }
 }

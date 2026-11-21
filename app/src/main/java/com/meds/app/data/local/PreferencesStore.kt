@@ -18,6 +18,8 @@ class PreferencesStore(private val context: Context) {
     private val biometricEnabledKey = booleanPreferencesKey("biometric_enabled")
     private val biometricAskedKey = booleanPreferencesKey("biometric_asked")
     private val tutorialSeenUidsKey = stringSetPreferencesKey("tutorial_seen_uids")
+    private val navBarStyleKey = stringPreferencesKey("patient_nav_bar_style")
+
     val role: Flow<String?> = context.medsDataStore.data.map { it[roleKey] }
     val name: Flow<String> = context.medsDataStore.data.map { it[nameKey].orEmpty() }
     val onboarded: Flow<Boolean> = context.medsDataStore.data.map { it[onboardedKey] ?: false }
@@ -25,6 +27,8 @@ class PreferencesStore(private val context: Context) {
         context.medsDataStore.data.map { it[biometricEnabledKey] ?: false }
     val biometricAsked: Flow<Boolean> =
         context.medsDataStore.data.map { it[biometricAskedKey] ?: false }
+    val navBarStyle: Flow<String?> =
+        context.medsDataStore.data.map { it[navBarStyleKey] }
 
     fun tutorialSeen(uid: String): Flow<Boolean> =
         context.medsDataStore.data.map { preferences ->
@@ -75,6 +79,12 @@ class PreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setNavBarStyle(style: String) {
+        context.medsDataStore.edit { preferences ->
+            preferences[navBarStyleKey] = style
+        }
+    }
+
     suspend fun markTutorialSeen(uid: String) {
         if (uid.isBlank()) return
         context.medsDataStore.edit { preferences ->
@@ -90,6 +100,7 @@ class PreferencesStore(private val context: Context) {
             preferences.remove(onboardedKey)
             preferences.remove(biometricEnabledKey)
             preferences.remove(biometricAskedKey)
+            preferences.remove(navBarStyleKey)
         }
     }
 }
