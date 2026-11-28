@@ -2,14 +2,15 @@ package com.meds.app.presentation.patient
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -67,14 +69,13 @@ import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.navigation.Routes
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import kotlinx.coroutines.delay
 
 private val StaticBarHeight = 68.dp
 private val IconPillHeight = 62.dp
 private val CenterHubSize = 62.dp
 private val GraphNodeSize = 52.dp
 private val GraphStageHeight = 200.dp
-
-private val GraphEasing = CubicBezierEasing(0.2f, 0f, 0f, 1f)
 
 private data class PatientDestination(
     val route: String,
@@ -85,8 +86,7 @@ private data class PatientDestination(
 private data class GraphNodeSpec(
     val destination: PatientDestination,
     val targetOffsetX: Dp,
-    val targetOffsetY: Dp,
-    val delayMillis: Int
+    val targetOffsetY: Dp
 )
 
 private val staticDestinations = listOf(
@@ -104,8 +104,7 @@ private val graphNodes = listOf(
             icon = Icons.Outlined.Medication
         ),
         targetOffsetX = (-76).dp,
-        targetOffsetY = (-76).dp,
-        delayMillis = 0
+        targetOffsetY = (-76).dp
     ),
     GraphNodeSpec(
         destination = PatientDestination(
@@ -114,8 +113,7 @@ private val graphNodes = listOf(
             icon = Icons.Outlined.Eco
         ),
         targetOffsetX = 0.dp,
-        targetOffsetY = (-102).dp,
-        delayMillis = 35
+        targetOffsetY = (-102).dp
     ),
     GraphNodeSpec(
         destination = PatientDestination(
@@ -124,8 +122,7 @@ private val graphNodes = listOf(
             icon = Icons.Outlined.Group
         ),
         targetOffsetX = 76.dp,
-        targetOffsetY = (-76).dp,
-        delayMillis = 70
+        targetOffsetY = (-76).dp
     )
 )
 
@@ -228,10 +225,24 @@ private fun StaticPatientTab(
         label = "patientTabIndicator"
     )
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale = animateFloatAsState(
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
+        label = "patientTabPress"
+    )
+
     Column(
         modifier = modifier
+            .graphicsLayer {
+                scaleX = pressScale.value
+                scaleY = pressScale.value
+            }
             .selectable(
                 selected = selected,
+                interactionSource = interactionSource,
+                indication = null,
                 role = Role.Tab,
                 onClick = onClick
             )
@@ -270,34 +281,43 @@ private fun GraphIconsPatientBottomBar(
     modifier: Modifier = Modifier
 ) {
     var graphExpanded by rememberSaveable { mutableStateOf(false) }
+    var nodesVisible by remember { mutableStateOf(false) }
 
     LaunchedEffect(currentRoute) {
         graphExpanded = false
+    }
+
+    LaunchedEffect(graphExpanded) {
+        if (graphExpanded) {
+            nodesVisible = true
+        } else {
+            delay(400)
+            nodesVisible = false
+        }
     }
 
     BackHandler(enabled = graphExpanded) {
         graphExpanded = false
     }
 
-    val nodeProgresses = graphNodes.mapIndexed { index, spec ->
+    val nodeProgresses = graphNodes.mapIndexed { index, _ ->
         animateFloatAsState(
             targetValue = if (graphExpanded) 1f else 0f,
-            animationSpec = tween(
-                durationMillis = if (graphExpanded) 240 else 170,
-                delayMillis = if (graphExpanded) spec.delayMillis else 0,
-                easing = GraphEasing
+            animationSpec = spring(
+                dampingRatio = 0.86f,
+                stiffness = 380f
             ),
             label = "graphNodeProgress_$index"
-        ).value
+        )
     }
 
-    val anyNodeVisible = graphExpanded || nodeProgresses.any { it > 0.01f }
     val isGraphDestinationActive = graphNodes.any { it.destination.route == currentRoute }
 
     Box(
         modifier = if (graphExpanded) {
             modifier
                 .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.10f))
                 .clickable(
                     interactionSource = remember { MutableInteractionSource() },
                     indication = null,
@@ -313,13 +333,13 @@ private fun GraphIconsPatientBottomBar(
                 .fillMaxWidth()
                 .navigationBarsPadding()
                 .padding(start = 14.dp, end = 14.dp, bottom = 8.dp)
-                .height(if (anyNodeVisible) GraphStageHeight else IconPillHeight),
+                .height(GraphStageHeight),
             contentAlignment = Alignment.BottomCenter
         ) {
             val primaryColor = MaterialTheme.colorScheme.primary
             val edgeDefaultColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.55f)
 
-            if (anyNodeVisible) {
+            if (nodesVisible) {
                 Canvas(
                     modifier = Modifier.fillMaxSize()
                 ) {
@@ -331,7 +351,7 @@ private fun GraphIconsPatientBottomBar(
                     val nodeRadius = GraphNodeSize.toPx() / 2f
 
                     graphNodes.forEachIndexed { index, spec ->
-                        val progress = nodeProgresses[index]
+                        val progress = nodeProgresses[index].value
                         if (progress > 0.02f) {
                             val dx = spec.targetOffsetX.toPx() * progress
                             val dy = spec.targetOffsetY.toPx() * progress
@@ -415,24 +435,21 @@ private fun GraphIconsPatientBottomBar(
                 }
             }
 
-            if (anyNodeVisible) {
+            if (nodesVisible) {
                 graphNodes.forEachIndexed { index, spec ->
-                    val progress = nodeProgresses[index]
-                    if (progress > 0.01f) {
-                        val selected = currentRoute == spec.destination.route
-                        GraphCircleNode(
-                            destination = spec.destination,
-                            selected = selected,
-                            progress = progress,
-                            offsetX = spec.targetOffsetX,
-                            offsetY = spec.targetOffsetY,
-                            onClick = {
-                                graphExpanded = false
-                                onNavigate(spec.destination.route)
-                            },
-                            modifier = Modifier.align(Alignment.BottomCenter)
-                        )
-                    }
+                    val selected = currentRoute == spec.destination.route
+                    GraphCircleNode(
+                        destination = spec.destination,
+                        selected = selected,
+                        progress = nodeProgresses[index],
+                        offsetX = spec.targetOffsetX,
+                        offsetY = spec.targetOffsetY,
+                        onClick = {
+                            graphExpanded = false
+                            onNavigate(spec.destination.route)
+                        },
+                        modifier = Modifier.align(Alignment.BottomCenter)
+                    )
                 }
             }
 
@@ -472,12 +489,26 @@ private fun PillIconAction(
         label = "pillIconIndicator"
     )
 
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale = animateFloatAsState(
+        targetValue = if (pressed) 0.94f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
+        label = "pillIconPress"
+    )
+
     Box(
         modifier = Modifier
-            .size(46.dp)
+            .size(48.dp)
+            .graphicsLayer {
+                scaleX = pressScale.value
+                scaleY = pressScale.value
+            }
             .background(indicatorColor, CircleShape)
             .selectable(
                 selected = selected,
+                interactionSource = interactionSource,
+                indication = null,
                 role = Role.Tab,
                 onClick = onClick
             )
@@ -499,7 +530,7 @@ private fun PillIconAction(
 private fun GraphCircleNode(
     destination: PatientDestination,
     selected: Boolean,
-    progress: Float,
+    progress: State<Float>,
     offsetX: Dp,
     offsetY: Dp,
     onClick: () -> Unit,
@@ -521,24 +552,36 @@ private fun GraphCircleNode(
     } else {
         MaterialTheme.colorScheme.onSurface
     }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale = animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
+        label = "graphNodePress"
+    )
 
     Surface(
-        onClick = onClick,
         modifier = modifier
             .padding(bottom = baseBottomOffset)
             .offset {
                 IntOffset(
-                    x = (offsetX.toPx() * progress).roundToInt(),
-                    y = (offsetY.toPx() * progress).roundToInt()
+                    x = (offsetX.toPx() * progress.value).roundToInt(),
+                    y = (offsetY.toPx() * progress.value).roundToInt()
                 )
             }
             .size(GraphNodeSize)
             .graphicsLayer {
-                val scale = lerp(0.55f, 1f, progress)
+                val scale = lerp(0.55f, 1f, progress.value) * pressScale.value
                 scaleX = scale
                 scaleY = scale
-                alpha = progress
+                alpha = progress.value
             }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick
+            )
             .semantics {
                 contentDescription = destination.label
             },
@@ -566,20 +609,27 @@ private fun CenterLeafHubButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val rotation by animateFloatAsState(
+    val rotation = animateFloatAsState(
         targetValue = if (expanded) 14f else 0f,
-        animationSpec = tween(220, easing = GraphEasing),
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "leafHubRotation"
     )
-    val scale by animateFloatAsState(
+    val scale = animateFloatAsState(
         targetValue = if (expanded) 1.05f else 1f,
-        animationSpec = tween(220, easing = GraphEasing),
+        animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "leafHubScale"
     )
     val borderColor = when {
         expanded || activeChild -> MaterialTheme.colorScheme.primaryContainer
         else -> MaterialTheme.colorScheme.outlineVariant
     }
+    val interactionSource = remember { MutableInteractionSource() }
+    val pressed by interactionSource.collectIsPressedAsState()
+    val pressScale = animateFloatAsState(
+        targetValue = if (pressed) 0.92f else 1f,
+        animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
+        label = "leafHubPress"
+    )
 
     val leafPath = remember {
         PathParser().parsePathString(
@@ -596,13 +646,18 @@ private fun CenterLeafHubButton(
     val leafColor = Color.White
 
     Surface(
-        onClick = onClick,
         modifier = modifier
             .size(CenterHubSize)
             .graphicsLayer {
-                scaleX = scale
-                scaleY = scale
+                scaleX = scale.value * pressScale.value
+                scaleY = scale.value * pressScale.value
             }
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                role = Role.Button,
+                onClick = onClick
+            )
             .semantics {
                 contentDescription = if (expanded) {
                     "Cerrar menú de navegación en grafo"
@@ -620,7 +675,7 @@ private fun CenterLeafHubButton(
             Canvas(
                 modifier = Modifier
                     .size(40.dp)
-                    .graphicsLayer { rotationZ = rotation }
+                    .graphicsLayer { rotationZ = rotation.value }
             ) {
                 val factor = size.minDimension / 108f
                 scale(scaleX = factor, scaleY = factor, pivot = Offset.Zero) {
