@@ -3,6 +3,7 @@ package com.meds.app.presentation.patient
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -18,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -64,6 +67,8 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
+import com.meds.app.core.ui.theme.LocalReduceMotion
+import com.meds.app.core.ui.theme.LocalShowGraphLabels
 import com.meds.app.core.ui.theme.calma.CalmaMotion
 import com.meds.app.domain.model.PatientNavBarStyle
 import com.meds.app.navigation.Routes
@@ -206,13 +211,14 @@ private fun StaticPatientTab(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val contentColor by animateColorAsState(
         targetValue = if (selected) {
             MaterialTheme.colorScheme.primary
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        animationSpec = tween(CalmaMotion.NAV_FADE_MILLIS),
+        animationSpec = if (reduceMotion) snap() else tween(CalmaMotion.NAV_FADE_MILLIS),
         label = "patientTabColor"
     )
     val indicatorColor by animateColorAsState(
@@ -221,7 +227,7 @@ private fun StaticPatientTab(
         } else {
             MaterialTheme.colorScheme.primary.copy(alpha = 0f)
         },
-        animationSpec = tween(CalmaMotion.NAV_FADE_MILLIS),
+        animationSpec = if (reduceMotion) snap() else tween(CalmaMotion.NAV_FADE_MILLIS),
         label = "patientTabIndicator"
     )
 
@@ -229,12 +235,13 @@ private fun StaticPatientTab(
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale = animateFloatAsState(
         targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
+        animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.7f, stiffness = 900f),
         label = "patientTabPress"
     )
 
     Column(
         modifier = modifier
+            .heightIn(min = 48.dp)
             .graphicsLayer {
                 scaleX = pressScale.value
                 scaleY = pressScale.value
@@ -280,6 +287,8 @@ private fun GraphIconsPatientBottomBar(
     onNavigate: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val reduceMotion = LocalReduceMotion.current
+    val showGraphLabels = LocalShowGraphLabels.current
     var graphExpanded by rememberSaveable { mutableStateOf(false) }
     var nodesVisible by remember { mutableStateOf(false) }
 
@@ -287,11 +296,13 @@ private fun GraphIconsPatientBottomBar(
         graphExpanded = false
     }
 
-    LaunchedEffect(graphExpanded) {
+    LaunchedEffect(graphExpanded, reduceMotion) {
         if (graphExpanded) {
             nodesVisible = true
         } else {
-            delay(400)
+            if (!reduceMotion) {
+                delay(400)
+            }
             nodesVisible = false
         }
     }
@@ -300,13 +311,19 @@ private fun GraphIconsPatientBottomBar(
         graphExpanded = false
     }
 
+    val nodeSpec = if (reduceMotion) {
+        snap<Float>()
+    } else {
+        spring(
+            dampingRatio = 0.86f,
+            stiffness = 380f
+        )
+    }
+
     val nodeProgresses = graphNodes.mapIndexed { index, _ ->
         animateFloatAsState(
             targetValue = if (graphExpanded) 1f else 0f,
-            animationSpec = spring(
-                dampingRatio = 0.86f,
-                stiffness = 380f
-            ),
+            animationSpec = nodeSpec,
             label = "graphNodeProgress_$index"
         )
     }
@@ -438,10 +455,11 @@ private fun GraphIconsPatientBottomBar(
             if (nodesVisible) {
                 graphNodes.forEachIndexed { index, spec ->
                     val selected = currentRoute == spec.destination.route
+                    val progress = nodeProgresses[index]
                     GraphCircleNode(
                         destination = spec.destination,
                         selected = selected,
-                        progress = nodeProgresses[index],
+                        progress = progress,
                         offsetX = spec.targetOffsetX,
                         offsetY = spec.targetOffsetY,
                         onClick = {
@@ -450,6 +468,38 @@ private fun GraphIconsPatientBottomBar(
                         },
                         modifier = Modifier.align(Alignment.BottomCenter)
                     )
+                    if (showGraphLabels) {
+                        Surface(
+                            modifier = Modifier
+                                .align(Alignment.BottomCenter)
+                                .offset {
+                                    IntOffset(
+                                        x = (spec.targetOffsetX.toPx() * progress.value).roundToInt(),
+                                        y = ((spec.targetOffsetY + 12.dp).toPx() * progress.value).roundToInt()
+                                    )
+                                }
+                                .graphicsLayer { alpha = progress.value }
+                                .clearAndSetSemantics {},
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f)
+                        ) {
+                            Text(
+                                text = spec.destination.label,
+                                modifier = Modifier
+                                    .width(84.dp)
+                                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
                 }
             }
 
@@ -470,13 +520,14 @@ private fun PillIconAction(
     selected: Boolean,
     onClick: () -> Unit
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val iconTint by animateColorAsState(
         targetValue = if (selected) {
             MaterialTheme.colorScheme.primary
         } else {
             MaterialTheme.colorScheme.onSurfaceVariant
         },
-        animationSpec = tween(CalmaMotion.NAV_FADE_MILLIS),
+        animationSpec = if (reduceMotion) snap() else tween(CalmaMotion.NAV_FADE_MILLIS),
         label = "pillIconTint"
     )
     val indicatorColor by animateColorAsState(
@@ -485,7 +536,7 @@ private fun PillIconAction(
         } else {
             Color.Transparent
         },
-        animationSpec = tween(CalmaMotion.NAV_FADE_MILLIS),
+        animationSpec = if (reduceMotion) snap() else tween(CalmaMotion.NAV_FADE_MILLIS),
         label = "pillIconIndicator"
     )
 
@@ -493,7 +544,7 @@ private fun PillIconAction(
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale = animateFloatAsState(
         targetValue = if (pressed) 0.94f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
+        animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.7f, stiffness = 900f),
         label = "pillIconPress"
     )
 
@@ -552,11 +603,12 @@ private fun GraphCircleNode(
     } else {
         MaterialTheme.colorScheme.onSurface
     }
+    val reduceMotion = LocalReduceMotion.current
     val interactionSource = remember { MutableInteractionSource() }
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale = animateFloatAsState(
         targetValue = if (pressed) 0.92f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
+        animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.7f, stiffness = 900f),
         label = "graphNodePress"
     )
 
@@ -576,10 +628,11 @@ private fun GraphCircleNode(
                 scaleY = scale
                 alpha = progress.value
             }
-            .clickable(
+            .selectable(
+                selected = selected,
                 interactionSource = interactionSource,
                 indication = null,
-                role = Role.Button,
+                role = Role.Tab,
                 onClick = onClick
             )
             .semantics {
@@ -609,14 +662,15 @@ private fun CenterLeafHubButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val reduceMotion = LocalReduceMotion.current
     val rotation = animateFloatAsState(
         targetValue = if (expanded) 14f else 0f,
-        animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
+        animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "leafHubRotation"
     )
     val scale = animateFloatAsState(
         targetValue = if (expanded) 1.05f else 1f,
-        animationSpec = spring(dampingRatio = 0.82f, stiffness = 420f),
+        animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.82f, stiffness = 420f),
         label = "leafHubScale"
     )
     val borderColor = when {
@@ -627,7 +681,7 @@ private fun CenterLeafHubButton(
     val pressed by interactionSource.collectIsPressedAsState()
     val pressScale = animateFloatAsState(
         targetValue = if (pressed) 0.92f else 1f,
-        animationSpec = spring(dampingRatio = 0.7f, stiffness = 900f),
+        animationSpec = if (reduceMotion) snap() else spring(dampingRatio = 0.7f, stiffness = 900f),
         label = "leafHubPress"
     )
 
@@ -643,7 +697,7 @@ private fun CenterLeafHubButton(
     }
 
     val containerColor = MaterialTheme.colorScheme.primary
-    val leafColor = Color.White
+    val leafColor = MaterialTheme.colorScheme.onPrimary
 
     Surface(
         modifier = modifier

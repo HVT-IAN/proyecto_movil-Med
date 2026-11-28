@@ -140,7 +140,7 @@ fun TextActionButton(
 ) {
     TextButton(
         onClick = onClick,
-        modifier = modifier.then(if (compact) Modifier.heightIn(min = 40.dp) else Modifier),
+        modifier = modifier.heightIn(min = 48.dp),
         contentPadding = if (compact) {
             PaddingValues(horizontal = 12.dp)
         } else {
