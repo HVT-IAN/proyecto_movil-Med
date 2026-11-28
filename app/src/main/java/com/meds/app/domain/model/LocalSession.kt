@@ -7,5 +7,9 @@ data class LocalSession(
     val onboarded: Boolean = false,
     val biometricEnabled: Boolean = false,
     val biometricAsked: Boolean = false,
-    val navBarStyle: PatientNavBarStyle = PatientNavBarStyle.STATIC
+    val navBarStyle: PatientNavBarStyle = PatientNavBarStyle.STATIC,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val reduceMotion: Boolean = false,
+    val highContrast: Boolean = false,
+    val graphLabels: Boolean = false
 )

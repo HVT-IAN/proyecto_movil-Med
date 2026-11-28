@@ -2,9 +2,10 @@ package com.meds.app.domain.repository
 
 import com.meds.app.domain.model.LocalSession
 import com.meds.app.domain.model.PatientNavBarStyle
+import com.meds.app.domain.model.ThemeMode
 import kotlinx.coroutines.flow.Flow
 
-/** Contrato de la sesión local: rol, onboarding, biometría y estilo de navegación. */
+/** Contrato de la sesión local: rol, onboarding, biometría, apariencia y navegación. */
 interface SessionRepository {
     val session: Flow<LocalSession>
 
@@ -23,6 +24,14 @@ interface SessionRepository {
     suspend fun markBiometricAsked()
 
     suspend fun setNavBarStyle(style: PatientNavBarStyle)
+
+    suspend fun setThemeMode(mode: ThemeMode)
+
+    suspend fun setReduceMotion(enabled: Boolean)
+
+    suspend fun setHighContrast(enabled: Boolean)
+
+    suspend fun setGraphLabels(enabled: Boolean)
 
     fun tutorialSeen(uid: String): Flow<Boolean>
 

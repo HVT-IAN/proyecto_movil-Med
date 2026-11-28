@@ -32,12 +32,14 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.meds.app.core.ui.theme.LocalReduceMotion
 import com.meds.app.core.ui.theme.calma.CalmaMotion
 import com.meds.app.core.ui.theme.calma.CalmaTheme
 import com.meds.app.di.MedsViewModelFactory
 import com.meds.app.domain.model.DoseLog
 import com.meds.app.domain.model.DoseStatus
 import com.meds.app.domain.model.PatientNavBarStyle
+import com.meds.app.domain.model.ThemeMode
 import com.meds.app.integration.widget.NextDoseWidgetProvider
 import com.meds.app.navigation.PatientNavGraph
 import com.meds.app.navigation.Routes
@@ -64,6 +66,10 @@ fun PatientApp(
     onClearAuthMessages: () -> Unit,
     onBiometricChange: (Boolean) -> Unit,
     onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {},
+    onThemeModeChange: (ThemeMode) -> Unit = {},
+    onReduceMotionChange: (Boolean) -> Unit = {},
+    onHighContrastChange: (Boolean) -> Unit = {},
+    onGraphLabelsChange: (Boolean) -> Unit = {},
     initialFocusLogId: String? = null,
     onFocusConsumed: () -> Unit = {}
 ) {
@@ -169,6 +175,8 @@ fun PatientApp(
     val bottomBarVisible = showBottomBar && focusDose == null
 
     CalmaTheme {
+        val reduceMotion = LocalReduceMotion.current
+        val focusFadeMillis = if (reduceMotion) 0 else CalmaMotion.SCREEN_FADE_MILLIS
         Scaffold(
             containerColor = MaterialTheme.colorScheme.background,
             snackbarHost = {
@@ -211,6 +219,10 @@ fun PatientApp(
                         onClearAuthMessages = onClearAuthMessages,
                         onBiometricChange = onBiometricChange,
                         onNavBarStyleChange = onNavBarStyleChange,
+                        onThemeModeChange = onThemeModeChange,
+                        onReduceMotionChange = onReduceMotionChange,
+                        onHighContrastChange = onHighContrastChange,
+                        onGraphLabelsChange = onGraphLabelsChange,
                         onFocusDose = { dose -> focusDoseId = dose.id },
                         modifier = Modifier.weight(1f)
                     )
@@ -235,16 +247,24 @@ fun PatientApp(
 
                 AnimatedVisibility(
                     visible = focusDose != null,
-                    enter = fadeIn(tween(CalmaMotion.SCREEN_FADE_MILLIS)) +
-                        scaleIn(
-                            initialScale = 0.96f,
-                            animationSpec = tween(CalmaMotion.SCREEN_FADE_MILLIS)
-                        ),
-                    exit = fadeOut(tween(CalmaMotion.SCREEN_FADE_MILLIS)) +
-                        scaleOut(
-                            targetScale = 0.98f,
-                            animationSpec = tween(CalmaMotion.SCREEN_FADE_MILLIS)
-                        ),
+                    enter = if (reduceMotion) {
+                        fadeIn(tween(0))
+                    } else {
+                        fadeIn(tween(focusFadeMillis)) +
+                            scaleIn(
+                                initialScale = 0.96f,
+                                animationSpec = tween(focusFadeMillis)
+                            )
+                    },
+                    exit = if (reduceMotion) {
+                        fadeOut(tween(0))
+                    } else {
+                        fadeOut(tween(focusFadeMillis)) +
+                            scaleOut(
+                                targetScale = 0.98f,
+                                animationSpec = tween(focusFadeMillis)
+                            )
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .zIndex(2f)

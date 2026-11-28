@@ -1,6 +1,5 @@
 package com.meds.app.core.ui.theme.calma
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
@@ -11,29 +10,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.meds.app.core.ui.theme.Manrope
-import com.meds.app.core.ui.theme.MedsTheme
 
 /**
  * Tema del módulo paciente: "Calma operativa".
  *
- * Hereda la paleta y los colores semánticos globales, pero sustituye la
- * tipografía por Manrope en todos los niveles y reduce la escala de los
- * titulares. La intención es una jerarquía clara, sin decoración ambiental
- * ni cambios de familia tipográfica dentro de la misma pantalla.
+ * Hereda la paleta y los colores semánticos globales ya resueltos en la raíz,
+ * pero sustituye la tipografía por Manrope en todos los niveles y reduce la
+ * escala de los titulares. La intención es una jerarquía clara, sin decoración
+ * ambiental ni cambios de familia tipográfica dentro de la misma pantalla.
  */
 @Composable
-fun CalmaTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
-    content: @Composable () -> Unit
-) {
-    MedsTheme(darkTheme = darkTheme) {
-        MaterialTheme(
-            colorScheme = MaterialTheme.colorScheme,
-            typography = CalmaTypography,
-            shapes = CalmaShapes,
-            content = content
-        )
-    }
+fun CalmaTheme(content: @Composable () -> Unit) {
+    MaterialTheme(
+        colorScheme = MaterialTheme.colorScheme,
+        typography = CalmaTypography,
+        shapes = CalmaShapes,
+        content = content
+    )
 }
 
 val CalmaTypography = Typography(

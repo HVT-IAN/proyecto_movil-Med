@@ -18,9 +18,11 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import com.meds.app.core.ui.theme.LocalReduceMotion
 import com.meds.app.core.ui.theme.calma.CalmaMotion
 import com.meds.app.domain.model.DoseLog
 import com.meds.app.domain.model.PatientNavBarStyle
+import com.meds.app.domain.model.ThemeMode
 import com.meds.app.presentation.patient.cima.MedicationInfoScreen
 import com.meds.app.presentation.patient.companion.PatientCompanionScreen
 import com.meds.app.presentation.patient.companion.PatientCompanionViewModel
@@ -56,24 +58,30 @@ fun PatientNavGraph(
     onClearAuthMessages: () -> Unit,
     onBiometricChange: (Boolean) -> Unit,
     onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {},
+    onThemeModeChange: (ThemeMode) -> Unit = {},
+    onReduceMotionChange: (Boolean) -> Unit = {},
+    onHighContrastChange: (Boolean) -> Unit = {},
+    onGraphLabelsChange: (Boolean) -> Unit = {},
     onFocusDose: (DoseLog) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    val navFadeMillis = if (LocalReduceMotion.current) 0 else CalmaMotion.NAV_FADE_MILLIS
+
     NavHost(
         navController = navController,
         startDestination = Routes.Patient.HOME,
         modifier = modifier,
         enterTransition = {
-            fadeIn(tween(CalmaMotion.NAV_FADE_MILLIS))
+            fadeIn(tween(navFadeMillis))
         },
         exitTransition = {
-            fadeOut(tween(CalmaMotion.NAV_FADE_MILLIS))
+            fadeOut(tween(navFadeMillis))
         },
         popEnterTransition = {
-            fadeIn(tween(CalmaMotion.NAV_FADE_MILLIS))
+            fadeIn(tween(navFadeMillis))
         },
         popExitTransition = {
-            fadeOut(tween(CalmaMotion.NAV_FADE_MILLIS))
+            fadeOut(tween(navFadeMillis))
         }
     ) {
         composable(Routes.Patient.HOME) {
@@ -135,6 +143,10 @@ fun PatientNavGraph(
                 onClearAuthMessages = onClearAuthMessages,
                 onBiometricChange = onBiometricChange,
                 onNavBarStyleChange = onNavBarStyleChange,
+                onThemeModeChange = onThemeModeChange,
+                onReduceMotionChange = onReduceMotionChange,
+                onHighContrastChange = onHighContrastChange,
+                onGraphLabelsChange = onGraphLabelsChange,
                 onOpenReminders = {
                     navController.navigate(Routes.Patient.REMINDERS)
                 }

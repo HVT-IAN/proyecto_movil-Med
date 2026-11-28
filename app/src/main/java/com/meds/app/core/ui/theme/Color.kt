@@ -75,4 +75,16 @@ val DarkMedsColors = MedsSemanticColors(
     leafDeep = Color(0xFFA8F0E3)
 )
 
+val HighContrastLightMedsColors = LightMedsColors.copy(
+    cardBorder = Ink,
+    pending = Color(0xFF8A5A00),
+    taken = Color(0xFF1E6B45)
+)
+
+val HighContrastDarkMedsColors = DarkMedsColors.copy(
+    cardBorder = NightInk,
+    pending = Color(0xFFF2C14E),
+    taken = Color(0xFF9BE7BC)
+)
+
 val LocalMedsColors = staticCompositionLocalOf { LightMedsColors }

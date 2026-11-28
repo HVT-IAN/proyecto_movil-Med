@@ -18,6 +18,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -26,9 +28,12 @@ import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.HelpOutline
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.outlined.Logout
+import androidx.compose.material.icons.outlined.BrightnessAuto
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Hub
+import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.QrCode2
@@ -68,6 +73,7 @@ import com.meds.app.core.ui.components.SectionLabel
 import com.meds.app.core.ui.components.SignOutConfirmDialog
 import com.meds.app.core.ui.theme.LocalMedsColors
 import com.meds.app.domain.model.PatientNavBarStyle
+import com.meds.app.domain.model.ThemeMode
 import com.meds.app.domain.model.UserRole
 import com.meds.app.integration.biometric.findFragmentActivity
 import com.meds.app.integration.biometric.requestSecurityConfirmation
@@ -81,6 +87,10 @@ fun AccountSettingsScreen(
     onClearAuthMessages: () -> Unit,
     onBiometricChange: (Boolean) -> Unit,
     onNavBarStyleChange: (PatientNavBarStyle) -> Unit = {},
+    onThemeModeChange: (ThemeMode) -> Unit = {},
+    onReduceMotionChange: (Boolean) -> Unit = {},
+    onHighContrastChange: (Boolean) -> Unit = {},
+    onGraphLabelsChange: (Boolean) -> Unit = {},
     onOpenReminders: () -> Unit = {},
     onOpenCompanions: () -> Unit = {},
     onShowTutorial: () -> Unit = {}
@@ -349,6 +359,77 @@ fun AccountSettingsScreen(
 
                 Spacer(Modifier.height(24.dp))
 
+                SectionLabel(text = "Apariencia")
+                Spacer(Modifier.height(10.dp))
+
+                MedsCard {
+                    ThemeModeOptionRow(
+                        icon = Icons.Outlined.BrightnessAuto,
+                        title = "Sistema",
+                        subtitle = "Sigue el tema del teléfono.",
+                        selected = account.themeMode == ThemeMode.SYSTEM,
+                        onClick = { onThemeModeChange(ThemeMode.SYSTEM) }
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp
+                    )
+                    ThemeModeOptionRow(
+                        icon = Icons.Outlined.LightMode,
+                        title = "Claro",
+                        subtitle = "Fondo claro y texto oscuro.",
+                        selected = account.themeMode == ThemeMode.LIGHT,
+                        onClick = { onThemeModeChange(ThemeMode.LIGHT) }
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp
+                    )
+                    ThemeModeOptionRow(
+                        icon = Icons.Outlined.DarkMode,
+                        title = "Oscuro",
+                        subtitle = "Fondo oscuro y texto claro.",
+                        selected = account.themeMode == ThemeMode.DARK,
+                        onClick = { onThemeModeChange(ThemeMode.DARK) }
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                SectionLabel(text = "Accesibilidad")
+                Spacer(Modifier.height(10.dp))
+
+                MedsCard {
+                    SwitchRow(
+                        title = "Reducir movimiento",
+                        subtitle = "Acorta las animaciones de la app.",
+                        checked = account.reduceMotion,
+                        onCheckedChange = onReduceMotionChange
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp
+                    )
+                    SwitchRow(
+                        title = "Alto contraste",
+                        subtitle = "Refuerza bordes y textos secundarios.",
+                        checked = account.highContrast,
+                        onCheckedChange = onHighContrastChange
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp
+                    )
+                    SwitchRow(
+                        title = "Etiquetas en la barra",
+                        subtitle = "Muestra los nombres bajo los iconos del grafo.",
+                        checked = account.graphLabels,
+                        onCheckedChange = onGraphLabelsChange
+                    )
+                }
+
+                Spacer(Modifier.height(24.dp))
+
                 SectionLabel(text = "Navegación")
                 Spacer(Modifier.height(10.dp))
 
@@ -535,7 +616,11 @@ private fun NavBarStyleOptionRow(
             .fillMaxWidth()
             .heightIn(min = 48.dp)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(role = Role.RadioButton, onClick = onClick)
+            .selectable(
+                selected = selected,
+                role = Role.RadioButton,
+                onClick = onClick
+            )
             .padding(vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -567,6 +652,64 @@ private fun NavBarStyleOptionRow(
         RadioButton(
             selected = selected,
             onClick = null
+        )
+    }
+}
+
+@Composable
+private fun ThemeModeOptionRow(
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    NavBarStyleOptionRow(
+        icon = icon,
+        title = title,
+        subtitle = subtitle,
+        selected = selected,
+        onClick = onClick
+    )
+}
+
+@Composable
+private fun SwitchRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 48.dp)
+            .clip(RoundedCornerShape(12.dp))
+            .toggleable(
+                value = checked,
+                role = Role.Switch,
+                onValueChange = onCheckedChange
+            )
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = null
         )
     }
 }

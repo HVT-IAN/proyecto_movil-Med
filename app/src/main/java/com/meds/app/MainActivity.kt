@@ -11,7 +11,6 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.withFrameNanos
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
-import com.meds.app.core.ui.theme.MedsTheme
 import com.meds.app.integration.notifications.EXTRA_LOG_ID
 import com.meds.app.navigation.AppNavGraph
 
@@ -42,13 +41,11 @@ class MainActivity : FragmentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MedsTheme {
-                AppNavGraph(
-                    onExit = { finish() },
-                    initialFocusLogId = pendingFocusLogId.value,
-                    onFocusConsumed = { pendingFocusLogId.value = null }
-                )
-            }
+            AppNavGraph(
+                onExit = { finish() },
+                initialFocusLogId = pendingFocusLogId.value,
+                onFocusConsumed = { pendingFocusLogId.value = null }
+            )
             LaunchedEffect(Unit) {
                 withFrameNanos { }
                 contentReady = true

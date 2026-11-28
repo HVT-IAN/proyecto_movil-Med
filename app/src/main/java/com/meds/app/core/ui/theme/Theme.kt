@@ -1,12 +1,22 @@
 package com.meds.app.core.ui.theme
 
+import android.animation.ValueAnimator
+import android.app.Activity
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+
+val LocalReduceMotion = staticCompositionLocalOf { false }
+val LocalHighContrast = staticCompositionLocalOf { false }
+val LocalShowGraphLabels = staticCompositionLocalOf { false }
 
 private val LightColors = lightColorScheme(
     primary = TealPrimary,
@@ -70,15 +80,63 @@ private val DarkColors = darkColorScheme(
     scrim = Color.Black
 )
 
+private val HighContrastLightColors = LightColors.copy(
+    primary = Color(0xFF0B5F58),
+    outline = Ink,
+    outlineVariant = Slate,
+    onSurfaceVariant = Ink,
+    surfaceVariant = Cloud
+)
+
+private val HighContrastDarkColors = DarkColors.copy(
+    primary = Color(0xFF8FE3D2),
+    outline = NightInk,
+    outlineVariant = Color(0xFFA3B3B8),
+    onSurfaceVariant = NightInk,
+    surfaceVariant = Color(0xFF223036)
+)
+
 @Composable
 fun MedsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    reduceMotion: Boolean = false,
+    highContrast: Boolean = false,
+    graphLabels: Boolean = false,
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColors else LightColors
-    val semanticColors = if (darkTheme) DarkMedsColors else LightMedsColors
+    val colorScheme = when {
+        darkTheme && highContrast -> HighContrastDarkColors
+        darkTheme -> DarkColors
+        highContrast -> HighContrastLightColors
+        else -> LightColors
+    }
+    val semanticColors = when {
+        darkTheme && highContrast -> HighContrastDarkMedsColors
+        darkTheme -> DarkMedsColors
+        highContrast -> HighContrastLightMedsColors
+        else -> LightMedsColors
+    }
 
-    CompositionLocalProvider(LocalMedsColors provides semanticColors) {
+    val systemReduceMotion = !ValueAnimator.areAnimatorsEnabled()
+    val resolvedReduceMotion = reduceMotion || systemReduceMotion
+
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            val window = (view.context as? Activity)?.window ?: return@SideEffect
+            WindowCompat.getInsetsController(window, view).apply {
+                isAppearanceLightStatusBars = !darkTheme
+                isAppearanceLightNavigationBars = !darkTheme
+            }
+        }
+    }
+
+    CompositionLocalProvider(
+        LocalMedsColors provides semanticColors,
+        LocalReduceMotion provides resolvedReduceMotion,
+        LocalHighContrast provides highContrast,
+        LocalShowGraphLabels provides graphLabels
+    ) {
         MaterialTheme(
             colorScheme = colorScheme,
             typography = MedsTypography,

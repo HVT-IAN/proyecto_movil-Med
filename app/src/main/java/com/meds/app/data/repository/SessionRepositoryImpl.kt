@@ -3,6 +3,7 @@ package com.meds.app.data.repository
 import com.meds.app.data.local.PreferencesStore
 import com.meds.app.domain.model.LocalSession
 import com.meds.app.domain.model.PatientNavBarStyle
+import com.meds.app.domain.model.ThemeMode
 import com.meds.app.domain.repository.SessionRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -29,11 +30,26 @@ class SessionRepositoryImpl(
         )
     }
 
-    override val session: Flow<LocalSession> = combine(
+    private val appearanceSession: Flow<LocalSession> = combine(
         baseSession,
-        preferences.navBarStyle
-    ) { base, navBarStyle ->
-        base.copy(navBarStyle = PatientNavBarStyle.fromName(navBarStyle))
+        preferences.navBarStyle,
+        preferences.themeMode,
+        preferences.reduceMotion,
+        preferences.highContrast
+    ) { base, navBarStyle, themeMode, reduceMotion, highContrast ->
+        base.copy(
+            navBarStyle = PatientNavBarStyle.fromName(navBarStyle),
+            themeMode = ThemeMode.fromName(themeMode),
+            reduceMotion = reduceMotion,
+            highContrast = highContrast
+        )
+    }
+
+    override val session: Flow<LocalSession> = combine(
+        appearanceSession,
+        preferences.graphLabels
+    ) { session, graphLabels ->
+        session.copy(graphLabels = graphLabels)
     }
 
     override suspend fun currentRole(): String? = preferences.role.first()
@@ -64,6 +80,22 @@ class SessionRepositoryImpl(
 
     override suspend fun setNavBarStyle(style: PatientNavBarStyle) {
         preferences.setNavBarStyle(style.name)
+    }
+
+    override suspend fun setThemeMode(mode: ThemeMode) {
+        preferences.setThemeMode(mode.name)
+    }
+
+    override suspend fun setReduceMotion(enabled: Boolean) {
+        preferences.setReduceMotion(enabled)
+    }
+
+    override suspend fun setHighContrast(enabled: Boolean) {
+        preferences.setHighContrast(enabled)
+    }
+
+    override suspend fun setGraphLabels(enabled: Boolean) {
+        preferences.setGraphLabels(enabled)
     }
 
     override fun tutorialSeen(uid: String): Flow<Boolean> =

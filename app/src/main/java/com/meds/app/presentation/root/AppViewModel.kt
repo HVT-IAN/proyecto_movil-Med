@@ -3,6 +3,7 @@ package com.meds.app.presentation.root
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.meds.app.domain.model.PatientNavBarStyle
+import com.meds.app.domain.model.ThemeMode
 import com.meds.app.domain.model.UserRole
 import com.meds.app.domain.repository.AuthRepository
 import com.meds.app.domain.repository.MedicationCacheRepository
@@ -78,7 +79,11 @@ class AppViewModel(
                         onboarded = local.onboarded,
                         biometricEnabled = local.biometricEnabled,
                         biometricAsked = local.biometricAsked,
-                        navBarStyle = local.navBarStyle
+                        navBarStyle = local.navBarStyle,
+                        themeMode = local.themeMode,
+                        reduceMotion = local.reduceMotion,
+                        highContrast = local.highContrast,
+                        graphLabels = local.graphLabels
                     )
                 }
             }
@@ -265,6 +270,30 @@ class AppViewModel(
     fun setNavBarStyle(style: PatientNavBarStyle) {
         viewModelScope.launch {
             sessionRepository.setNavBarStyle(style)
+        }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        viewModelScope.launch {
+            sessionRepository.setThemeMode(mode)
+        }
+    }
+
+    fun setReduceMotion(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionRepository.setReduceMotion(enabled)
+        }
+    }
+
+    fun setHighContrast(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionRepository.setHighContrast(enabled)
+        }
+    }
+
+    fun setGraphLabels(enabled: Boolean) {
+        viewModelScope.launch {
+            sessionRepository.setGraphLabels(enabled)
         }
     }
 

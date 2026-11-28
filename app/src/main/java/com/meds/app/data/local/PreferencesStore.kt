@@ -19,6 +19,10 @@ class PreferencesStore(private val context: Context) {
     private val biometricAskedKey = booleanPreferencesKey("biometric_asked")
     private val tutorialSeenUidsKey = stringSetPreferencesKey("tutorial_seen_uids")
     private val navBarStyleKey = stringPreferencesKey("patient_nav_bar_style")
+    private val themeModeKey = stringPreferencesKey("theme_mode")
+    private val reduceMotionKey = booleanPreferencesKey("reduce_motion")
+    private val highContrastKey = booleanPreferencesKey("high_contrast")
+    private val graphLabelsKey = booleanPreferencesKey("graph_labels")
 
     val role: Flow<String?> = context.medsDataStore.data.map { it[roleKey] }
     val name: Flow<String> = context.medsDataStore.data.map { it[nameKey].orEmpty() }
@@ -29,6 +33,13 @@ class PreferencesStore(private val context: Context) {
         context.medsDataStore.data.map { it[biometricAskedKey] ?: false }
     val navBarStyle: Flow<String?> =
         context.medsDataStore.data.map { it[navBarStyleKey] }
+    val themeMode: Flow<String?> = context.medsDataStore.data.map { it[themeModeKey] }
+    val reduceMotion: Flow<Boolean> =
+        context.medsDataStore.data.map { it[reduceMotionKey] ?: false }
+    val highContrast: Flow<Boolean> =
+        context.medsDataStore.data.map { it[highContrastKey] ?: false }
+    val graphLabels: Flow<Boolean> =
+        context.medsDataStore.data.map { it[graphLabelsKey] ?: false }
 
     fun tutorialSeen(uid: String): Flow<Boolean> =
         context.medsDataStore.data.map { preferences ->
@@ -85,6 +96,30 @@ class PreferencesStore(private val context: Context) {
         }
     }
 
+    suspend fun setThemeMode(mode: String) {
+        context.medsDataStore.edit { preferences ->
+            preferences[themeModeKey] = mode
+        }
+    }
+
+    suspend fun setReduceMotion(enabled: Boolean) {
+        context.medsDataStore.edit { preferences ->
+            preferences[reduceMotionKey] = enabled
+        }
+    }
+
+    suspend fun setHighContrast(enabled: Boolean) {
+        context.medsDataStore.edit { preferences ->
+            preferences[highContrastKey] = enabled
+        }
+    }
+
+    suspend fun setGraphLabels(enabled: Boolean) {
+        context.medsDataStore.edit { preferences ->
+            preferences[graphLabelsKey] = enabled
+        }
+    }
+
     suspend fun markTutorialSeen(uid: String) {
         if (uid.isBlank()) return
         context.medsDataStore.edit { preferences ->
@@ -101,6 +136,10 @@ class PreferencesStore(private val context: Context) {
             preferences.remove(biometricEnabledKey)
             preferences.remove(biometricAskedKey)
             preferences.remove(navBarStyleKey)
+            preferences.remove(themeModeKey)
+            preferences.remove(reduceMotionKey)
+            preferences.remove(highContrastKey)
+            preferences.remove(graphLabelsKey)
         }
     }
 }
