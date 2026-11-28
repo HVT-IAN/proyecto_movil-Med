@@ -32,7 +32,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.Group
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -56,6 +55,7 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.PathParser
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
@@ -67,6 +67,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.lerp
+import com.meds.app.R
 import com.meds.app.core.ui.theme.LocalReduceMotion
 import com.meds.app.core.ui.theme.LocalShowGraphLabels
 import com.meds.app.core.ui.theme.calma.CalmaMotion
@@ -94,19 +95,25 @@ private data class GraphNodeSpec(
     val targetOffsetY: Dp
 )
 
-private val staticDestinations = listOf(
+@Composable
+private fun staticDestinations(): List<PatientDestination> = listOf(
     PatientDestination(Routes.Patient.HOME, "Hoy", Icons.Outlined.Home),
-    PatientDestination(Routes.Patient.MEDICATIONS, "Medicamentos", Icons.Outlined.Medication),
+    PatientDestination(
+        Routes.Patient.MEDICATIONS,
+        "Medicamentos",
+        ImageVector.vectorResource(R.drawable.ic_pill)
+    ),
     PatientDestination(Routes.Patient.GARDEN, "Jardín", Icons.Outlined.Eco),
     PatientDestination(Routes.Patient.SETTINGS, "Ajustes", Icons.Outlined.Settings)
 )
 
-private val graphNodes = listOf(
+@Composable
+private fun graphNodeSpecs(): List<GraphNodeSpec> = listOf(
     GraphNodeSpec(
         destination = PatientDestination(
             route = Routes.Patient.MEDICATIONS,
             label = "Medicamentos",
-            icon = Icons.Outlined.Medication
+            icon = ImageVector.vectorResource(R.drawable.ic_pill)
         ),
         targetOffsetX = (-76).dp,
         targetOffsetY = (-76).dp
@@ -191,7 +198,8 @@ private fun StaticPatientBottomBar(
                     .padding(horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                staticDestinations.forEach { destination ->
+                val destinations = staticDestinations()
+                destinations.forEach { destination ->
                     StaticPatientTab(
                         destination = destination,
                         selected = currentRoute == destination.route,
@@ -320,6 +328,7 @@ private fun GraphIconsPatientBottomBar(
         )
     }
 
+    val graphNodes = graphNodeSpecs()
     val nodeProgresses = graphNodes.mapIndexed { index, _ ->
         animateFloatAsState(
             targetValue = if (graphExpanded) 1f else 0f,

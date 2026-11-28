@@ -16,7 +16,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
-import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,8 +23,11 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
+import com.meds.app.R
 import com.meds.app.core.common.formatTimeOfDay
 import com.meds.app.core.ui.components.BreathingDots
 import com.meds.app.core.ui.components.EmptyState
@@ -103,7 +105,7 @@ fun MedicationsScreen(
 
             state.medications.isEmpty() -> {
                 EmptyState(
-                    icon = Icons.Outlined.Medication,
+                    icon = ImageVector.vectorResource(R.drawable.ic_pill),
                     title = "Aún no hay medicamentos",
                     message = "Agrega el primero para tener un horario claro y recibir recordatorios.",
                     actionLabel = "Agregar medicamento",

@@ -19,7 +19,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Close
-import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,11 +30,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.meds.app.R
 import com.meds.app.core.ui.components.BreathingDots
 import com.meds.app.core.ui.components.EmptyState
 import com.meds.app.core.ui.components.MedsCard
@@ -204,7 +206,7 @@ fun MedicationInfoScreen(
 
             !state.searched -> {
                 EmptyState(
-                    icon = Icons.Outlined.Medication,
+                    icon = ImageVector.vectorResource(R.drawable.ic_pill),
                     title = "Consulta medicamentos",
                     message = "Los datos vienen de la CIMA de la AEMPS. Puedes consultar la ficha técnica y el prospecto oficial.",
                     modifier = Modifier.weight(1f)

@@ -18,7 +18,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Eco
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Medication
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Icon
@@ -31,7 +30,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import com.meds.app.R
 import com.meds.app.core.ui.components.PrimaryActionButton
 import com.meds.app.core.ui.components.TextActionButton
 
@@ -99,7 +100,7 @@ fun FirstRunTutorial(
             )
             Spacer(Modifier.height(18.dp))
             TutorialRow(
-                icon = Icons.Outlined.Medication,
+                icon = ImageVector.vectorResource(R.drawable.ic_pill),
                 title = "Medicamentos",
                 message = "Dosis, horarios y edición de tu tratamiento."
             )
