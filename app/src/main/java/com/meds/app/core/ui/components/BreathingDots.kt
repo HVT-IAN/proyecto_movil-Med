@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.meds.app.core.ui.theme.LocalReduceMotion
 
 @Composable
 fun BreathingDots(
@@ -31,8 +32,28 @@ fun BreathingDots(
     dotSize: Dp = 4.dp,
     spacing: Dp = 5.dp
 ) {
-    val transition = rememberInfiniteTransition(label = "breathingDots")
+    val reduceMotion = LocalReduceMotion.current
     val fixedWidth = dotSize * 3 + spacing * 2
+
+    if (reduceMotion) {
+        Row(
+            modifier = modifier.width(fixedWidth),
+            horizontalArrangement = Arrangement.spacedBy(spacing, Alignment.CenterHorizontally),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(3) {
+                Box(
+                    modifier = Modifier
+                        .size(dotSize)
+                        .graphicsLayer { alpha = 0.65f }
+                        .background(color = color, shape = CircleShape)
+                )
+            }
+        }
+        return
+    }
+
+    val transition = rememberInfiniteTransition(label = "breathingDots")
 
     Row(
         modifier = modifier.width(fixedWidth),

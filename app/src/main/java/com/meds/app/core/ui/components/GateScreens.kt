@@ -42,6 +42,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.lerp
 import com.meds.app.core.ui.theme.LocalMedsColors
+import com.meds.app.core.ui.theme.LocalReduceMotion
 import com.meds.app.core.ui.theme.calma.CalmaMotion
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -67,13 +68,21 @@ fun LoadingScreen() {
 private fun LoadingContent() {
     val colors = LocalMedsColors.current
     val primaryColor = MaterialTheme.colorScheme.primary
+    val reduceMotion = LocalReduceMotion.current
 
-    val plantEntrance = remember { Animatable(0f) }
-    val wordmarkEntrance = remember { Animatable(0f) }
-    val phraseEntrance = remember { Animatable(0f) }
-    val trackEntrance = remember { Animatable(0f) }
+    val plantEntrance = remember(reduceMotion) { Animatable(if (reduceMotion) 1f else 0f) }
+    val wordmarkEntrance = remember(reduceMotion) { Animatable(if (reduceMotion) 1f else 0f) }
+    val phraseEntrance = remember(reduceMotion) { Animatable(if (reduceMotion) 1f else 0f) }
+    val trackEntrance = remember(reduceMotion) { Animatable(if (reduceMotion) 1f else 0f) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(reduceMotion) {
+        if (reduceMotion) {
+            plantEntrance.snapTo(1f)
+            wordmarkEntrance.snapTo(1f)
+            phraseEntrance.snapTo(1f)
+            trackEntrance.snapTo(1f)
+            return@LaunchedEffect
+        }
         launch {
             delay(CalmaMotion.SPLASH_STAGGER_MILLIS.toLong())
             plantEntrance.animateTo(
@@ -107,28 +116,37 @@ private fun LoadingContent() {
         }
     }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "loadingLoop")
-    val breathPhase by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = CalmaMotion.SPLASH_BREATH_MILLIS,
-                easing = FastOutSlowInEasing
+    val breathPhase: Float
+    val shimmerProgress: Float
+    if (reduceMotion) {
+        breathPhase = 0.5f
+        shimmerProgress = 0.5f
+    } else {
+        val infiniteTransition = rememberInfiniteTransition(label = "loadingLoop")
+        val animatedBreath by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = CalmaMotion.SPLASH_BREATH_MILLIS,
+                    easing = FastOutSlowInEasing
+                ),
+                repeatMode = RepeatMode.Reverse
             ),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "breathPhase"
-    )
-    val shimmerProgress by infiniteTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerProgress"
-    )
+            label = "breathPhase"
+        )
+        val animatedShimmer by infiniteTransition.animateFloat(
+            initialValue = 0f,
+            targetValue = 1f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(durationMillis = 1500, easing = LinearEasing),
+                repeatMode = RepeatMode.Restart
+            ),
+            label = "shimmerProgress"
+        )
+        breathPhase = animatedBreath
+        shimmerProgress = animatedShimmer
+    }
 
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
