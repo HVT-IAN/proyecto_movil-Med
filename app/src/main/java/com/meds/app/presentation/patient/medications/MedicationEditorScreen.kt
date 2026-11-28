@@ -1,6 +1,7 @@
 package com.meds.app.presentation.patient.medications
 
 import android.app.TimePickerDialog
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -87,15 +88,32 @@ fun MedicationEditorScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
-    var name by rememberSaveable { mutableStateOf(medication?.name.orEmpty()) }
-    var dose by rememberSaveable { mutableStateOf(medication?.dose.orEmpty()) }
-    var form by rememberSaveable { mutableStateOf(medication?.form ?: "Tableta") }
-    var anchor by rememberSaveable { mutableStateOf(schedule?.anchor ?: "Sin rutina") }
-    var stockText by rememberSaveable {
-        mutableStateOf(medication?.stock?.takeIf { it > 0 }?.toString().orEmpty())
-    }
-    var times by remember { mutableStateOf(schedule?.times?.sorted() ?: emptyList()) }
+    val initialName = medication?.name.orEmpty()
+    val initialDose = medication?.dose.orEmpty()
+    val initialForm = medication?.form ?: "Tableta"
+    val initialAnchor = schedule?.anchor ?: "Sin rutina"
+    val initialStockText = medication?.stock?.takeIf { it > 0 }?.toString().orEmpty()
+    val initialTimes = schedule?.times?.sorted() ?: emptyList()
+
+    var name by rememberSaveable { mutableStateOf(initialName) }
+    var dose by rememberSaveable { mutableStateOf(initialDose) }
+    var form by rememberSaveable { mutableStateOf(initialForm) }
+    var anchor by rememberSaveable { mutableStateOf(initialAnchor) }
+    var stockText by rememberSaveable { mutableStateOf(initialStockText) }
+    var times by remember { mutableStateOf(initialTimes) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showDiscardDialog by remember { mutableStateOf(false) }
+
+    val hasChanges = name != initialName ||
+        dose != initialDose ||
+        form != initialForm ||
+        anchor != initialAnchor ||
+        stockText != initialStockText ||
+        times != initialTimes
+
+    BackHandler(enabled = hasChanges && !showDeleteDialog) {
+        showDiscardDialog = true
+    }
 
     LaunchedEffect(state.saveSuccess) {
         if (state.saveSuccess) {
@@ -173,7 +191,11 @@ fun MedicationEditorScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = onDone) {
+                IconButton(
+                    onClick = {
+                        if (hasChanges) showDiscardDialog = true else onDone()
+                    }
+                ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Outlined.ArrowBack,
                         contentDescription = "Volver",
@@ -417,6 +439,31 @@ fun MedicationEditorScreen(
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
                     Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("¿Descartar cambios?") },
+            text = {
+                Text("Perderás lo que escribiste en este medicamento.")
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardDialog = false
+                        onDone()
+                    }
+                ) {
+                    Text("Descartar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Seguir editando")
                 }
             }
         )

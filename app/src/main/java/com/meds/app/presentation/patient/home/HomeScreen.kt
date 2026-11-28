@@ -84,7 +84,8 @@ fun HomeScreen(
     onViewAll: () -> Unit,
     onOpenCompanions: () -> Unit,
     onMarkNudgeRead: (String) -> Unit,
-    onQuickAddMedication: (MedicationDraft) -> Unit = {}
+    onQuickAddMedication: (MedicationDraft) -> Unit = {},
+    onConsumeSaveSuccess: () -> Unit = {}
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) {
@@ -97,6 +98,15 @@ fun HomeScreen(
     var showAllDoses by rememberSaveable { mutableStateOf(false) }
     var showQuickAdd by rememberSaveable { mutableStateOf(false) }
     var snoozeDose by remember { mutableStateOf<DoseLog?>(null) }
+
+    LaunchedEffect(state.saveSuccess) {
+        if (state.saveSuccess) {
+            if (showQuickAdd) {
+                showQuickAdd = false
+            }
+            onConsumeSaveSuccess()
+        }
+    }
 
     val dateText = remember(now / 60_000L) { formatDateKey(todayKey()) }
     val greeting = currentGreeting()
@@ -433,6 +443,8 @@ fun HomeScreen(
     if (showQuickAdd) {
         QuickAddMedicationSheet(
             onDismiss = { showQuickAdd = false },
+            saving = state.saving,
+            error = state.error,
             onSave = { medName, medDose, hora ->
                 onQuickAddMedication(
                     MedicationDraft(
@@ -445,7 +457,6 @@ fun HomeScreen(
                         anchor = "Sin rutina"
                     )
                 )
-                showQuickAdd = false
             },
             onMoreOptions = {
                 showQuickAdd = false

@@ -12,23 +12,35 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Schedule
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.meds.app.R
 import com.meds.app.core.common.formatTimeOfDay
+import com.meds.app.core.common.medicationMatchesQuery
 import com.meds.app.core.ui.components.BreathingDots
 import com.meds.app.core.ui.components.EmptyState
 import com.meds.app.core.ui.components.MedsCard
@@ -51,6 +63,20 @@ fun MedicationsScreen(
     onAddMedication: () -> Unit,
     onEditMedication: (String) -> Unit
 ) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val filteredMedications = if (query.isBlank()) {
+        state.medications
+    } else {
+        state.medications.filter { medication ->
+            medicationMatchesQuery(
+                name = medication.name,
+                dose = medication.dose,
+                form = medication.form,
+                query = query
+            )
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -85,6 +111,37 @@ fun MedicationsScreen(
             }
         }
 
+        if (state.medications.size > 4) {
+            Spacer(Modifier.height(16.dp))
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                placeholder = { Text("Buscar medicamento") },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Outlined.Search,
+                        contentDescription = null
+                    )
+                },
+                trailingIcon = if (query.isNotBlank()) {
+                    {
+                        IconButton(onClick = { query = "" }) {
+                            Icon(
+                                imageVector = Icons.Outlined.Close,
+                                contentDescription = "Limpiar búsqueda"
+                            )
+                        }
+                    }
+                } else {
+                    null
+                },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search)
+            )
+        }
+
         Spacer(Modifier.height(20.dp))
 
         when {
@@ -114,7 +171,15 @@ fun MedicationsScreen(
             }
 
             else -> {
-                if (state.medications.size > 1) {
+                if (query.isNotBlank()) {
+                    Text(
+                        text = "${filteredMedications.size} de " +
+                            "${state.medications.size} medicamentos",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                } else if (state.medications.size > 1) {
                     Text(
                         text = "${state.medications.size} medicamentos",
                         style = MaterialTheme.typography.labelMedium,
@@ -122,16 +187,27 @@ fun MedicationsScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                 }
-                state.medications.forEach { medication ->
-                    val schedule = state.schedules.firstOrNull {
-                        it.medicationId == medication.id
-                    }
-                    MedicationCard(
-                        medication = medication,
-                        schedule = schedule,
-                        onEdit = { onEditMedication(medication.id) }
+
+                if (filteredMedications.isEmpty()) {
+                    EmptyState(
+                        icon = Icons.Outlined.Search,
+                        title = "Sin resultados",
+                        message = "No encontramos medicamentos con “$query”.",
+                        actionLabel = "Limpiar búsqueda",
+                        onAction = { query = "" }
                     )
-                    Spacer(Modifier.height(12.dp))
+                } else {
+                    filteredMedications.forEach { medication ->
+                        val schedule = state.schedules.firstOrNull {
+                            it.medicationId == medication.id
+                        }
+                        MedicationCard(
+                            medication = medication,
+                            schedule = schedule,
+                            onEdit = { onEditMedication(medication.id) }
+                        )
+                        Spacer(Modifier.height(12.dp))
+                    }
                 }
             }
         }

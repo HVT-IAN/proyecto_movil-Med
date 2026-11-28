@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -36,6 +37,7 @@ import com.meds.app.core.ui.components.LabelValue
 import com.meds.app.core.ui.components.MedsCard
 import com.meds.app.core.ui.components.PlantArt
 import com.meds.app.core.ui.theme.calma.CalmaMotion
+import com.meds.app.core.ui.theme.LocalReduceMotion
 import com.meds.app.domain.model.PlantState
 
 /**
@@ -53,25 +55,35 @@ fun GardenScreen(
     val isMaxLevel = plant.isMaxLevel
     val stageXp = plant.stageXp
 
-    val sway = rememberInfiniteTransition(label = "gardenSway")
-    val swayAngle by sway.animateFloat(
-        initialValue = -1.6f,
-        targetValue = 1.6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(
-                durationMillis = CalmaMotion.GARDEN_SWAY_MILLIS,
-                easing = FastOutSlowInEasing
+    val reduceMotion = LocalReduceMotion.current
+
+    val swayAngle = if (reduceMotion) {
+        0f
+    } else {
+        val sway = rememberInfiniteTransition(label = "gardenSway")
+        sway.animateFloat(
+            initialValue = -1.6f,
+            targetValue = 1.6f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(
+                    durationMillis = CalmaMotion.GARDEN_SWAY_MILLIS,
+                    easing = FastOutSlowInEasing
+                ),
+                repeatMode = RepeatMode.Reverse
             ),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "gardenSwayAngle"
-    )
+            label = "gardenSwayAngle"
+        ).value
+    }
     val progress by animateFloatAsState(
         targetValue = plant.stageProgress,
-        animationSpec = tween(
-            durationMillis = CalmaMotion.GARDEN_PROGRESS_MILLIS,
-            easing = FastOutSlowInEasing
-        ),
+        animationSpec = if (reduceMotion) {
+            snap()
+        } else {
+            tween(
+                durationMillis = CalmaMotion.GARDEN_PROGRESS_MILLIS,
+                easing = FastOutSlowInEasing
+            )
+        },
         label = "gardenProgress"
     )
 

@@ -35,6 +35,7 @@ import com.meds.app.presentation.patient.PatientUiState
 import com.meds.app.presentation.patient.PatientViewModel
 import com.meds.app.presentation.settings.AccountSettingsScreen
 import com.meds.app.presentation.settings.AccountUiState
+import com.meds.app.presentation.settings.HelpSupportScreen
 import com.meds.app.presentation.settings.ReminderSettingsScreen
 
 /**
@@ -85,11 +86,6 @@ fun PatientNavGraph(
         }
     ) {
         composable(Routes.Patient.HOME) {
-            LaunchedEffect(state.saveSuccess) {
-                if (state.saveSuccess) {
-                    patientViewModel.consumeSaveSuccess()
-                }
-            }
             HomeScreen(
                 name = account.name,
                 state = state,
@@ -108,7 +104,8 @@ fun PatientNavGraph(
                     navController.navigate(Routes.Patient.COMPANIONS)
                 },
                 onMarkNudgeRead = patientViewModel::markNudgeRead,
-                onQuickAddMedication = patientViewModel::saveMedication
+                onQuickAddMedication = patientViewModel::saveMedication,
+                onConsumeSaveSuccess = patientViewModel::consumeSaveSuccess
             )
         }
 
@@ -149,6 +146,9 @@ fun PatientNavGraph(
                 onGraphLabelsChange = onGraphLabelsChange,
                 onOpenReminders = {
                     navController.navigate(Routes.Patient.REMINDERS)
+                },
+                onOpenHelp = {
+                    navController.navigate(Routes.Patient.HELP)
                 }
             )
         }
@@ -163,6 +163,12 @@ fun PatientNavGraph(
         composable(Routes.Patient.REMINDERS) {
             ReminderSettingsScreen(
                 medications = state.medications,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(Routes.Patient.HELP) {
+            HelpSupportScreen(
                 onBack = { navController.popBackStack() }
             )
         }

@@ -199,11 +199,11 @@ fun SectionLabel(
     modifier: Modifier = Modifier
 ) {
     Text(
-        text = text.uppercase(),
+        text = text,
         modifier = modifier,
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        letterSpacing = 1.sp
+        letterSpacing = 0.5.sp
     )
 }
 

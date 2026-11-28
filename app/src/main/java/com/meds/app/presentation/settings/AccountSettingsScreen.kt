@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.outlined.LightMode
 import androidx.compose.material.icons.outlined.Link
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.QrCode2
+import androidx.compose.material.icons.outlined.SupportAgent
 import androidx.compose.material.icons.outlined.ViewCarousel
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.ButtonDefaults
@@ -92,6 +94,7 @@ fun AccountSettingsScreen(
     onHighContrastChange: (Boolean) -> Unit = {},
     onGraphLabelsChange: (Boolean) -> Unit = {},
     onOpenReminders: () -> Unit = {},
+    onOpenHelp: () -> Unit = {},
     onOpenCompanions: () -> Unit = {},
     onShowTutorial: () -> Unit = {}
 ) {
@@ -138,7 +141,8 @@ fun AccountSettingsScreen(
     Scaffold(containerColor = MaterialTheme.colorScheme.background) { padding ->
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .fillMaxWidth()
+                .widthIn(max = 560.dp)
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp, vertical = 20.dp)
@@ -475,6 +479,16 @@ fun AccountSettingsScreen(
                         title = "Cómo funciona MEDs",
                         subtitle = "Consulta la guía rápida de la app.",
                         onClick = onShowTutorial
+                    )
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                        thickness = 1.dp
+                    )
+                    SettingsActionRow(
+                        icon = Icons.Outlined.SupportAgent,
+                        title = "Ayuda y soporte",
+                        subtitle = "Preguntas frecuentes y contacto.",
+                        onClick = onOpenHelp
                     )
                 }
 

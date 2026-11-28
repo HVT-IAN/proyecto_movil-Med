@@ -18,6 +18,7 @@ object Routes {
         const val HISTORY = "history"
         const val COMPANIONS = "companions"
         const val REMINDERS = "reminders"
+        const val HELP = "help"
 
         const val EDITOR_NEW = "medication_editor/new"
         const val EDITOR_PATTERN = "medication_editor/{medicationId}"

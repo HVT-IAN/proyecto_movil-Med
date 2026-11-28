@@ -280,7 +280,7 @@ private fun StaticPatientTab(
         Spacer(Modifier.height(3.dp))
         Text(
             text = destination.label,
-            style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+            style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
             color = contentColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -497,7 +497,7 @@ private fun GraphIconsPatientBottomBar(
                                 modifier = Modifier
                                     .width(84.dp)
                                     .padding(horizontal = 4.dp, vertical = 1.dp),
-                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
+                                style = MaterialTheme.typography.labelSmall.copy(fontSize = 11.sp),
                                 color = if (selected) {
                                     MaterialTheme.colorScheme.primary
                                 } else {

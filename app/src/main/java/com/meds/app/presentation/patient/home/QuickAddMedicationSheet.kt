@@ -78,7 +78,9 @@ fun QuickAddMedicationSheet(
     onDismiss: () -> Unit,
     onSave: (name: String, dose: String, time: String) -> Unit,
     onMoreOptions: () -> Unit,
-    visible: Boolean = true
+    visible: Boolean = true,
+    saving: Boolean = false,
+    error: String? = null
 ) {
     if (!visible) return
 
@@ -203,8 +205,16 @@ fun QuickAddMedicationSheet(
             }
 
             Spacer(Modifier.height(18.dp))
+            if (error != null) {
+                Text(
+                    text = error,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.error
+                )
+                Spacer(Modifier.height(12.dp))
+            }
             PrimaryActionButton(
-                text = "Agregar",
+                text = if (saving) "Guardando..." else "Agregar",
                 onClick = {
                     val timeToSave = resolveQuickTime(
                         option = selectedOption,
@@ -213,7 +223,7 @@ fun QuickAddMedicationSheet(
                     ) ?: return@PrimaryActionButton
                     onSave(name.trim(), dose.trim(), timeToSave)
                 },
-                enabled = canSave,
+                enabled = canSave && !saving,
                 icon = Icons.Outlined.Check
             )
             Spacer(Modifier.height(6.dp))
