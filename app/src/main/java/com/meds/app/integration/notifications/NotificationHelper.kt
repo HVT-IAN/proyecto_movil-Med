@@ -5,6 +5,8 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.media.AudioAttributes
+import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 import androidx.core.app.NotificationCompat
@@ -16,13 +18,24 @@ import com.meds.app.R
 object NotificationHelper {
     const val CHANNEL_REMINDERS = "meds_reminders"
     const val CHANNEL_REMINDERS_SOFT = "meds_reminders_soft"
+    const val CHANNEL_REMINDERS_SOFT_V2 = "meds_reminders_soft_v2"
     const val CHANNEL_NUDGES = "meds_nudges"
     const val CHANNEL_NUDGES_V2 = "meds_nudges_v2"
+    const val CHANNEL_NUDGES_V3 = "meds_nudges_v3"
     const val CHANNEL_COMPANIONS = "meds_companions"
 
     private const val NOTIFICATION_ID_NUDGE = 2001
     private const val NOTIFICATION_ID_COMPANION = 2002
     private const val NOTIFICATION_ID_TEST = 2003
+
+    private fun chimeUri(context: Context): Uri =
+        Uri.parse("android.resource://${context.packageName}/${R.raw.meds_chime}")
+
+    private fun chimeAudioAttributes(): AudioAttributes =
+        AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
 
     fun createChannels(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -37,22 +50,25 @@ object NotificationHelper {
                 enableVibration(true)
             }
 
-            val nudges = NotificationChannel(
-                CHANNEL_NUDGES,
+            val remindersSoft = NotificationChannel(
+                CHANNEL_REMINDERS_SOFT_V2,
+                "Recordatorios suaves",
+                NotificationManager.IMPORTANCE_DEFAULT
+            ).apply {
+                description = "Avisos de medicación sin vibración"
+                enableVibration(false)
+                enableLights(false)
+                setSound(chimeUri(context), chimeAudioAttributes())
+            }
+
+            val nudgesV3 = NotificationChannel(
+                CHANNEL_NUDGES_V3,
                 "Recordatorios de acompañantes",
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
-                description = "Avisos que envían las personas que te acompañan"
-            }
-
-            val nudgesV2 = NotificationChannel(
-                CHANNEL_NUDGES_V2,
-                "Recordatorios de acompañantes",
-                NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "Recordatorios con sonido y vibración de tus acompañantes"
+                description = "Avisos de tus acompañantes con sonido característico"
                 enableVibration(true)
-                enableLights(true)
+                setSound(chimeUri(context), chimeAudioAttributes())
             }
 
             val companions = NotificationChannel(
@@ -65,19 +81,12 @@ object NotificationHelper {
                 enableLights(true)
             }
 
-            val remindersSoft = NotificationChannel(
-                CHANNEL_REMINDERS_SOFT,
-                "Recordatorios suaves",
-                NotificationManager.IMPORTANCE_DEFAULT
-            ).apply {
-                description = "Avisos de medicación sin vibración"
-                enableVibration(false)
-                enableLights(false)
-            }
-
             manager.createNotificationChannels(
-                listOf(reminders, remindersSoft, nudges, nudgesV2, companions)
+                listOf(reminders, remindersSoft, nudgesV3, companions)
             )
+            manager.deleteNotificationChannel(CHANNEL_REMINDERS_SOFT)
+            manager.deleteNotificationChannel(CHANNEL_NUDGES_V2)
+            manager.deleteNotificationChannel(CHANNEL_NUDGES)
         }
     }
 
@@ -134,7 +143,7 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS_SOFT)
+        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS_SOFT_V2)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Toma de $medicationName")
             .setContentText("$dose · $time")
@@ -181,7 +190,7 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val notification = NotificationCompat.Builder(context, CHANNEL_NUDGES_V2)
+        val notification = NotificationCompat.Builder(context, CHANNEL_NUDGES_V3)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Recordatorio de $safeName")
             .setContentText(safeMessage)
@@ -237,7 +246,7 @@ object NotificationHelper {
 
     fun showTestReminder(context: Context, soundEnabled: Boolean) {
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return
-        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS_SOFT)
+        val notification = NotificationCompat.Builder(context, CHANNEL_REMINDERS_SOFT_V2)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle("Así se verá tu aviso")
             .setContentText("Un recordatorio suave de MEDs.")
